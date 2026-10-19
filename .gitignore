@@ -1,0 +1,28 @@
+# E-mu material and local data: never published
+bin/
+build/
+ghidra/
+notes/*.c
+recordings/
+backups/
+*.syx
+*.EXE
+*.exe.img
+sysex/*.log
+
+# build outputs
+apps/target/
+apps/dist/
+patches/**/*.o
+patches/**/*.elf
+patches/**/*.bin
+patches/**/*.ld
+patches/**/tables.inc
+patches/rfx/rfx_v*.s
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+*.swp

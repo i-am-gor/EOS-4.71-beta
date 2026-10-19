@@ -1,0 +1,11 @@
+[package]
+name = "eos-flasher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Build EOS 4.71-beta from E-mu's EOS470.EXE and flash it to an E4 over MIDI"
+
+[dependencies]
+eos-core = { path = "../eos-core" }
+eframe.workspace = true
+rfd.workspace = true

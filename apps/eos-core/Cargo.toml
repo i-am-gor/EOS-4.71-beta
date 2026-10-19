@@ -1,0 +1,10 @@
+[package]
+name = "eos-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "E-mu EOS 4.70 image codec, 4.71-beta patch, MIDI File Dump and editor SysEx"
+
+[dependencies]
+sha2.workspace = true
+midir.workspace = true

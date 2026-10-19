@@ -1,0 +1,13 @@
+[package]
+name = "eos-pantest"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "E4 pan test: voice Pan, Multimode Pan and CC10 sweeps measured on any audio input pair"
+
+[dependencies]
+eos-core = { path = "../eos-core" }
+eframe.workspace = true
+rfd.workspace = true
+cpal.workspace = true
+hound.workspace = true

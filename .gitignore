@@ -26,3 +26,7 @@ __pycache__/
 # OS / editor
 .DS_Store
 *.swp
+apps/target-*/
+.flatpak-builder/
+flatpak-build/
+*.flatpak

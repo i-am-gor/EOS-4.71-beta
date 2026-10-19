@@ -29,13 +29,23 @@ patch and verifies the result) and sends it to the E4 over MIDI.
 
 Downloads (see [Releases](../../releases)):
 
-| App | macOS (universal: Apple silicon + Intel) | Windows |
-|---|---|---|
-| **EOS Flasher**: build 4.71-beta (or the original 4.70) and flash it over MIDI | `EOS-Flasher-macOS-universal.zip` | `EOS-Flasher-Windows.zip` |
-| **EOS Pan Test**: measure the pan bug on your E4 and report results | `EOS-PanTest-macOS-universal.zip` | `EOS-PanTest-Windows.zip` |
+| App | macOS 11+ (universal: Apple silicon + Intel) | macOS 10.13 High Sierra+ (Intel) | Windows | Linux (Flatpak, x86_64) |
+|---|---|---|---|---|
+| **EOS Flasher**: build 4.71-beta (or the original 4.70) and flash it over MIDI | `EOS-Flasher-macOS-universal.zip` | `EOS-Flasher-macOS-HighSierra-Intel.zip` | `EOS-Flasher-Windows.zip` | `EOS-Flasher-Linux-x86_64.flatpak` |
+| **EOS Pan Test**: measure the pan bug on your E4 and report results | `EOS-PanTest-macOS-universal.zip` | `EOS-PanTest-macOS-HighSierra-Intel.zip` | `EOS-PanTest-Windows.zip` | `EOS-PanTest-Linux-x86_64.flatpak` |
 
 The apps are not signed with a developer certificate: on macOS, right-click the app and choose **Open**
-the first time; on Windows, choose **More info → Run anyway**.
+the first time; on Windows, choose **More info → Run anyway**. On an Intel Mac with macOS 10.13–10.15 use
+the High Sierra builds; on macOS 11 or later (and on Apple silicon) use the universal ones.
+
+On Linux, install the Freedesktop runtime once, then the bundle (MIDI uses the ALSA sequencer):
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user flathub org.freedesktop.Platform//24.08
+flatpak install --user EOS-Flasher-Linux-x86_64.flatpak
+flatpak run io.github.rfidmusic.EOSFlasher
+```
 
 ### Flash EOS 4.71-beta
 
@@ -72,7 +82,8 @@ To go back, do the same with **Original EOS 4.70**.
 | `testbank/` | Test Suite.E4B bank |
 | `testsignals/` | Test sine/sweep signals and the example wavetable |
 
-Building the apps: `cd apps && cargo build --release` (macOS universal bundles: `apps/bundle_macos.sh`).
+Building the apps: `cd apps && cargo build --release` (macOS universal bundles: `apps/bundle_macos.sh`;
+High Sierra Intel bundles: `apps/bundle_macos_highsierra.sh`; Flatpak manifests: `apps/linux/`).
 Rebuilding the firmware from source needs the stock image from your EOS470.EXE; see
 [docs/TECHNICAL.md](docs/TECHNICAL.md).
 

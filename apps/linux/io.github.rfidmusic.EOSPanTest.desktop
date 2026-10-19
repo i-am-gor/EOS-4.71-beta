@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=EOS Pan Test
+Comment=Measure the E-mu E4 pan range and report results
+Exec=eos-pantest
+Icon=io.github.rfidmusic.EOSPanTest
+Terminal=false
+Categories=AudioVideo;Audio;Music;

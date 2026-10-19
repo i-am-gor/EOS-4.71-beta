@@ -20,12 +20,16 @@ jobs:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - name: Test core
         run: cd apps && cargo test -p eos-core --release
-      - name: Build universal app bundles
+      - name: Build universal app bundles (macOS 11+)
         run: apps/bundle_macos.sh
+      - name: Build High Sierra app bundles (Intel, macOS 10.13+)
+        run: apps/bundle_macos_highsierra.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-universal
-          path: apps/dist/*.zip
+          name: macos
+          path: |
+            apps/dist/*.zip
+            apps/dist/highsierra/*.zip
 
   windows:
     runs-on: windows-latest
@@ -45,9 +49,30 @@ jobs:
           name: windows
           path: apps/dist/*.zip
 
+  flatpak:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08
+      options: --privileged
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: io.github.rfidmusic.EOSFlasher
+            bundle: EOS-Flasher-Linux-x86_64.flatpak
+          - app: io.github.rfidmusic.EOSPanTest
+            bundle: EOS-PanTest-Linux-x86_64.flatpak
+    steps:
+      - uses: actions/checkout@v4
+      - uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
+        with:
+          manifest-path: apps/linux/${{ matrix.app }}.yml
+          bundle: ${{ matrix.bundle }}
+          cache-key: flatpak-${{ matrix.app }}-${{ hashFiles('apps/Cargo.lock') }}
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [macos, windows]
+    needs: [macos, windows, flatpak]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -56,5 +81,7 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.zip
+          files: |
+            dist/*.zip
+            dist/*.flatpak
           prerelease: true

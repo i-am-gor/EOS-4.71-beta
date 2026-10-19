@@ -1,0 +1,37 @@
+# Flatpak manifest: EOS Pan Test (built in CI, .github/workflows/build.yml; local: flatpak-builder --user --install build io.github.rfidmusic.EOSPanTest.yml)
+# --device=all: ALSA sequencer (/dev/snd/seq) for MIDI and multichannel audio interfaces.
+app-id: io.github.rfidmusic.EOSPanTest
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: eos-pantest
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --device=all
+  - --socket=pulseaudio
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/eos-pantest/cargo
+  build-args:
+    - --share=network
+modules:
+  - name: eos-pantest
+    buildsystem: simple
+    build-commands:
+      - cargo build --release --locked -p eos-pantest
+      - install -Dm755 target/release/eos-pantest /app/bin/eos-pantest
+      - install -Dm644 linux/io.github.rfidmusic.EOSPanTest.desktop /app/share/applications/io.github.rfidmusic.EOSPanTest.desktop
+      - install -Dm644 linux/io.github.rfidmusic.EOSPanTest.svg /app/share/icons/hicolor/scalable/apps/io.github.rfidmusic.EOSPanTest.svg
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - target
+          - target-highsierra
+          - dist

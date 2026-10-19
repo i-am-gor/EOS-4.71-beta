@@ -1,0 +1,36 @@
+# Flatpak manifest: EOS Flasher (built in CI, .github/workflows/build.yml; local: flatpak-builder --user --install build io.github.rfidmusic.EOSFlasher.yml)
+# --device=all: ALSA sequencer (/dev/snd/seq) for MIDI.
+app-id: io.github.rfidmusic.EOSFlasher
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: eos-flasher
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --device=all
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/eos-flasher/cargo
+  build-args:
+    - --share=network
+modules:
+  - name: eos-flasher
+    buildsystem: simple
+    build-commands:
+      - cargo build --release --locked -p eos-flasher
+      - install -Dm755 target/release/eos-flasher /app/bin/eos-flasher
+      - install -Dm644 linux/io.github.rfidmusic.EOSFlasher.desktop /app/share/applications/io.github.rfidmusic.EOSFlasher.desktop
+      - install -Dm644 linux/io.github.rfidmusic.EOSFlasher.svg /app/share/icons/hicolor/scalable/apps/io.github.rfidmusic.EOSFlasher.svg
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - target
+          - target-highsierra
+          - dist

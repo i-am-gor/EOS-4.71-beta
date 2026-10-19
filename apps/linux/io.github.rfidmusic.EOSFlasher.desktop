@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=EOS Flasher
+Comment=Build EOS 4.71-beta from EOS470.EXE and flash it to an E-mu E4 over MIDI
+Exec=eos-flasher
+Icon=io.github.rfidmusic.EOSFlasher
+Terminal=false
+Categories=AudioVideo;Audio;Music;

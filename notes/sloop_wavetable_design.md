@@ -137,3 +137,41 @@ frames (energy-weighted estimate of a blended window). Firmware "EOS 4.70 Sync6+
 Sample-building rules and the frame-size / max-frames table are in `sysex/README.md`
 ("Transwave samples (SLpScn): size guidelines"): 2 lead-in samples, equal frames = loop length, loop on
 frame 1, frames x frame size <= 32,768 (travel limit 32,767 samples from the 16-bit shift word).
+
+## SLpScn whole-frame stepping (2026-10-21, EOS 4.71-beta2 checksum 08882940)
+A/B on P001 (recordings/slpscn_ab2, tools/hw_slpscn_ab.py; same preset, only loop cords changed): the user's
+smooth reference (AEnv+ -> Gain4X +100 -> SLoop +100 x4) holds clean frames and moves in whole-frame jumps
+(clipped envelope); SLpScn (Gain4X -> SLpScn +6, AEnv+ -> SLpScn +100) drifts continuously, each 10 ms tick landing
+mid-cycle -> smeared, inharmonic spectra ("noise"). Also AEnv+ is 0 at note-on, so an envelope at 100 with 0 attack
+makes the first tick jump the whole range.
+Fix: sl_shift's 22-byte scan block 0x200EC (shift = sum * R / 4032) replaced in place by whole-frame stepping
+(patches/slpscn/snap.s): shift = round(sum * floor(R / L) / 4032) * L (exact rounding for sum >= 0; negative sums
+round half a frame toward zero; sum * F can overflow only with > 65k frames). Use envelope -> SLpScn directly
+(no Gain4X: it multiplies the range by 4). Cord amount sets the range (+100 = whole table).
+emu_sloop 6,012 / 0 (model snaps; Mod Wheel sweep 0..7936 in 256-sample steps); mutations rounding 209,
+multiply 866 caught. emu_silence 217 / 0 (allow-list + 0x200EC), emu_slice 3,806 / 0, LFO 51,395 / 0, RFX 12,300 / 0.
+
+## Loop-shift glide instead of frame stepping (2026-10-21, beta2 checksum 08882a2b)
+The user wants continuous (interpolating) movement, only without the noise burst on fast moves. Frame stepping
+(snap.s) is NOT applied. Instead the 10 ms tick applies at most LIM = 64 samples of loop movement per tick
+(patches/slpscn/slew.s in place at 0x5FED0..0x5FEED + shift_t in slice.s; tick call 0x5FECA -> shift_t):
+slow moves unchanged, fast wheel / envelope moves and the note-on jump glide (32 frames x 256 at 64/tick ≈ 1.3 s).
+Applies to SLoop and SLpScn. Emulator: tools/emu_slew.py 4,000 / 0 (real tick 0x5FE4C vs a no-glide build;
+2,344 clamped, 1,621 within the limit; mutations LIM 48 → 2,754, wrong negation → 2,532); emu_sloop 6,012 / 0,
+emu_silence 217 / 0, emu_slice 3,806 / 0, LFO 51,395 / 0, RFX 12,300 / 0.
+Before take on 08882a77 (no glide): recordings/fastmove/before_08882a77.wav (P000, key 89, wheel slammed 0/127).
+
+## The note-start burst: playback ran through the table before reaching the loop (2026-10-22)
+Hardware on beta2 08882a2b, P002 (test table, AEnv+ -> SLpScn +100, key 89): the loop sits at frames ~29-30 from the
+first 100 ms (the amp envelope is already at full at note-on; earlier statement "AEnv+ is 0 at note-on" was wrong),
+but the dominant frame in the first 40 ms runs 6, 8, 12, 15, 19, 22, 25, 30, 32: playback starts at the sample start
+and runs through the frames until it reaches the shifted loop = the noise burst (recordings/glide_p002).
+Fix (beta2 checksum 08882e66): scan_start (slice.s, section .slS) — non-Slice voices leave the note-on exit through it;
+with a non-zero SLpScn sum, each forward looped channel starts at its (shifted) loop start (+0x0C = +0x10); one-shot,
+reverse and plain SLoop voices unchanged. Space: LP+Fuzz release streamlined (RELEASE-only paths without the test
+switch and the never-active low-frame cap): .ctor 988 -> 896 bytes, equal to the tested build (emu_lpfuzz_rel
+17,291 / 0; test build byte-identical). Glide (64 samples / tick) kept.
+Emulator: emu_slice 3,806 / 0 (start-at-loop mutations 160 / 69), emu_slew 4,000 / 0, emu_silence 217 / 0,
+emu_sloop 6,012 / 0, LFO 51,395 / 0, cords 13,004 / 0 (dest 55 reset), RFX 12,300 / 0.
+- Hardware (2026-10-22, beta2 08882e66, P002): notes start on frames 31-32 (was a 6 -> 32 run-through in the first
+  40 ms); user confirms it sounds clean with a fast envelope and fast Mod Wheel moves.

@@ -11,6 +11,15 @@ Everything not mentioned here works as described there.
 > **Note:** EOS 4.71-beta is not made, supported or endorsed by E-mu Systems or Creative Technology.
 > It is a beta: back up your banks before installing it. You can return to EOS 4.70 at any time.
 
+### Names Changed in EOS 4.71-beta2
+
+| Feature | EOS 4.71-beta (beta1) | EOS 4.71-beta2 |
+|---|---|---|
+| Transwave / wavetable scan cord destination | **SLpScn** | **WTScan** |
+
+Only the name has changed: the destination works the same way. Presets saved with an SLpScn cord in
+beta1 load and play unchanged in beta2 and show WTScan.
+
 ---
 
 ## To Install EOS version 4.71-beta
@@ -145,9 +154,13 @@ Short dropouts in the clock (under 250 ms) are caught up, so the LFOs stay in ti
 
 ---
 
-## Transwave Scanning: the SLpScn Cord Destination
+## Transwave Scanning: the WTScan Cord Destination
 
-The new cord destination **SLpScn** (sample loop scan) slides a sample's loop window through the
+> **Name change:** in EOS 4.71-beta (beta1) this destination is called **SLpScn** (sample loop scan). In
+> EOS 4.71-beta2 it is called **WTScan** (wavetable scan). Only the name has changed: it works the same way, and
+> presets made with SLpScn cords play unchanged and show WTScan.
+
+The new cord destination **WTScan** (wavetable scan) slides a sample's loop window through the
 sample while the note plays. With a sample made of a series of single-cycle waveforms ("frames"), the
 loop moves from frame to frame: Ensoniq-style transwave and wavetable sounds.
 
@@ -157,7 +170,7 @@ loop moves from frame to frame: Ensoniq-style transwave and wavetable sounds.
    silence**, then the frames. Loop it on its first frame (forward or alternating loop, Start 2).
 2. Assign the sample to a voice.
 3. On the **Cords** page, choose a source (for example **ModWl**, **Lfo1+** or an envelope), set the
-   destination to **SLpScn** and the amount to **+100**.
+   destination to **WTScan** and the amount to **+100**.
 4. Play a note and move the source: the sound changes as the loop moves through the frames.
 
 - At **+100**, a full-scale source moves the loop from frame 1 to the end of the sample;
@@ -168,7 +181,7 @@ loop moves from frame to frame: Ensoniq-style transwave and wavetable sounds.
 
 ### Building Transwave Samples
 
-SLpScn slides the sample's loop window through the sample while the note plays. How you build the sample
+WTScan slides the sample's loop window through the sample while the note plays. How you build the sample
 decides how far it can travel and how many waveforms (frames) it can reach.
 
 **Rules**
@@ -184,7 +197,7 @@ decides how far it can travel and how many waveforms (frames) it can reach.
   at most 32,767 samples from where the loop is set (about 0.74 s at 44.1 kHz, 0.68 s at 48 kHz). The
   loop is also kept inside the sample.
 - **Keep the whole sample within reach:** sample length ≤ 2 + 32,768 samples (with the loop on frame 1).
-  Longer samples still play, but SLpScn's range is scaled to the whole sample, so the part of the
+  Longer samples still play, but WTScan's range is scaled to the whole sample, so the part of the
   controller travel aimed beyond the reachable area just holds at the limit.
 
 **Maximum number of frames** (loop on frame 1; frames × frame size ≤ 32,768)
@@ -218,7 +231,7 @@ E4's resampling dulls high harmonics more when a frame has few samples per cycle
   samples per full cord).
 
 **Example:** the test bank's **WT test** presets use a table of 32 frames of 256 samples with 2 lead-in
-samples (8,194 samples, loop 2–258). Use Mod Wheel → SLpScn +100.
+samples (8,194 samples, loop 2–258). Use Mod Wheel → WTScan +100.
 
 ---
 

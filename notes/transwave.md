@@ -29,3 +29,12 @@ Uses 4 cords source 167 -> SLoop (amount 100, 100, 100, 50) plus others: stackin
 - Clamp the moved loop to [sample start, sample end].
 Hooks: FUN_0005FAE0 (note-on shift) and FUN_0005FE4C (realtime). Needs ~100 bytes; the vector cave
 and EXT are full after Sync6, so space has to be found first.
+
+## Measured on the E4 (2026-10-21): SLoop and Gain4X depth (tools/hw_sloop_gain_exp.py, recordings/sloop_gain)
+Test table wt32x256_harmonics_pad2 in P001 voice 0 (loop 2..258), key 89, Mod Wheel stepped 0..127; loop shift fitted
+against the table's own windows. Corrects earlier estimates (100 or 127 samples per cord; "Gain4X clips"):
+- One ModWl -> SLoop +100 cord: 1 sample per CC step, 128 samples at CC 127. 2 cords = exactly one 256-sample frame.
+- Gain4X multiplies the depth by 4 and does not clip (ModWl -> Gain4X -> SLoop x1 == 4 direct cords).
+- Hard ceiling ~1,009–1,016 samples (16-bit cord sum / 32): beyond it the shift wraps to arbitrary positions
+  (Gain4X + SLoop x4 at CC >= 80, x8 at CC >= 48, x14 at CC >= 24). So SLoop reaches at most ~4 frames of 256.
+- SLpScn +100 (7,936 samples, ~62.5 per CC step) cannot be matched by SLoop beyond ~CC 16.

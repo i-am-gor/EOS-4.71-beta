@@ -1,5 +1,8 @@
-# Transwave samples (SLpScn): size guidelines
-SLpScn slides the sample's loop window through the sample while the note plays. How you build the sample
+# Transwave samples (WTScan): size guidelines
+
+*This destination is called **SLpScn** in EOS 4.71-beta (beta1) and **WTScan** in EOS 4.71-beta2; only the name has changed.*
+
+WTScan slides the sample's loop window through the sample while the note plays. How you build the sample
 decides how far it can travel and how many waveforms (frames) it can reach.
 
 **Rules**
@@ -14,7 +17,7 @@ decides how far it can travel and how many waveforms (frames) it can reach.
   most 32,767 samples from where the loop is set (about 0.74 s at 44.1 kHz, 0.68 s at 48 kHz). The patch
   also keeps the loop inside the sample.
 - **Keep the whole sample within reach**: sample length ≤ 2 + 32,768 samples (with the loop on frame 1).
-  Longer samples still play, but SLpScn's range is scaled to the whole sample, so the part of the
+  Longer samples still play, but WTScan's range is scaled to the whole sample, so the part of the
   controller travel aimed beyond the reachable area just holds at the limit.
 
 **Maximum number of frames** (loop on frame 1; frames × frame size ≤ 32,768)
@@ -47,4 +50,4 @@ E4's resampling dulls high harmonics more when a frame has few samples per cycle
   (about 127 samples per full cord).
 
 **Example:** `testsignals/wavetable/wt32x256_harmonics_pad2.wav` has 2 lead-in samples and 32 frames of
-256 samples (8,194 samples total), with the loop at 2–258. Use Mod Wheel → SLpScn +100.
+256 samples (8,194 samples total), with the loop at 2–258. Use Mod Wheel → WTScan +100.

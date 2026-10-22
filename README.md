@@ -48,9 +48,30 @@ Downloads (see [Releases](../../releases)):
 | **EOS Flasher**: build 4.71-beta2 (or 4.71-beta, or the original 4.70) and flash it over MIDI | `EOS-Flasher-macOS-universal.zip` | `EOS-Flasher-macOS-HighSierra-Intel.zip` | `EOS-Flasher-Windows.zip` | `EOS-Flasher-Linux-x86_64.flatpak` |
 | **EOS Pan Test**: measure the pan bug on your E4 and report results | `EOS-PanTest-macOS-universal.zip` | `EOS-PanTest-macOS-HighSierra-Intel.zip` | `EOS-PanTest-Windows.zip` | `EOS-PanTest-Linux-x86_64.flatpak` |
 
-The apps are not signed with a developer certificate: on macOS, right-click the app and choose **Open**
-the first time; on Windows, choose **More info → Run anyway**. On an Intel Mac with macOS 10.13–10.15 use
-the High Sierra builds; on macOS 11 or later (and on Apple silicon) use the universal ones.
+The apps are not signed with an Apple or Microsoft developer certificate, so the first launch needs one extra
+step. On an Intel Mac with macOS 10.13–10.15 use the High Sierra builds; on macOS 11 or later (and on Apple
+silicon) use the universal ones.
+
+**macOS: "EOS Flasher" Not Opened / "Apple could not verify … is free of malware"**
+
+macOS shows this the first time you open an app that isn't from the App Store or a registered developer. Click
+**Done** (not **Move to Trash**), then:
+
+- **macOS 15 Sequoia and later:**
+  1. Open **System Settings → Privacy & Security**.
+  2. Scroll down to **Security**: it says "EOS Flasher" was blocked. Click **Open Anyway**.
+  3. Confirm with your password or Touch ID, then click **Open Anyway** in the dialog that follows.
+- **macOS 10.13 High Sierra to 14 Sonoma:** Control-click (or right-click) the app, choose **Open**, then click
+  **Open** in the dialog.
+
+You only need to do this once per app: once for EOS Flasher and once for EOS Pan Test. Alternatively, in Terminal
+(adjust the path to where you put the app):
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/EOS Flasher.app"
+```
+
+**Windows:** if SmartScreen says "Windows protected your PC", choose **More info → Run anyway**.
 
 On Linux, install the Freedesktop runtime once, then the bundle (MIDI uses the ALSA sequencer):
 

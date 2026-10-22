@@ -38,6 +38,18 @@ You need:
   computer MIDI In. The E4 answers every packet during the transfer.
 - The **EOS Flasher** application (macOS, Windows or Linux).
 
+**First launch on a Mac.** The apps are not signed by a registered Apple developer, so the first time you open
+one, macOS says **"EOS Flasher" Not Opened** ("Apple could not verify … is free of malware"). Click **Done**,
+not **Move to Trash**, then:
+
+- **macOS 15 Sequoia and later:** open **System Settings → Privacy & Security**, scroll down to **Security** and
+  click **Open Anyway** next to "EOS Flasher was blocked". Confirm with your password, then click **Open Anyway**
+  again.
+- **macOS 10.13 to 14:** Control-click (or right-click) the app, choose **Open**, then click **Open**.
+
+This is needed once for each app (EOS Flasher and EOS Pan Test). On Windows, if SmartScreen appears, choose
+**More info → Run anyway**.
+
 **To build and send EOS 4.71-beta2:**
 
 1. Start **EOS Flasher** and press **Choose EOS470.EXE…**. Select the file. The flasher confirms

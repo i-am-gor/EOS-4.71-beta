@@ -18,6 +18,8 @@ starts.
 4. On the **Cords** page, set the source to **Key+**, the destination to **'Slice** and the amount to **+100**.
 5. Play the Original Key for slice 1, the next key up for slice 2, and so on.
 
+**Notes:**
+
 - Keys above the last slice play the last slice; keys below the Original Key play the first slice (or
   slices before the loop, if the sample has whole slices before it).
 - Stereo samples are sliced on both sides.

@@ -5,6 +5,7 @@ use crate::test::{Config, Row, TestKind};
 
 pub const REPO: &str = "rfidmusic/EOS-4.71-beta";
 const HARD_DB: f64 = 60.0; // one side more than 60 dB down = hard panned
+const CENTRE_OK_DB: f64 = 0.1; // |L - R| at centre within this = balanced (4.70 / 4.71-beta: about -0.24 dB)
 
 /// Per test: where the sweep first reaches hard left / hard right, and what that means.
 pub fn verdicts(rows: &[Row]) -> Vec<String> {
@@ -34,6 +35,18 @@ pub fn verdicts(rows: &[Row]) -> Vec<String> {
             _ => format!("{}: did not reach hard left/right in the measured values (check the outputs and levels)", kind.label()),
         };
         out.push(text);
+        if let Some(c) = main.iter().find(|r| r.value == centre) {
+            let d = c.l_db - c.r_db;
+            out.push(if d.abs() <= CENTRE_OK_DB {
+                format!("{}: centre ({centre}) balanced, L-R {d:+.2} dB (as in EOS 4.71-beta2)", kind.label())
+            } else {
+                format!(
+                    "{}: centre ({centre}) L-R {d:+.2} dB ({} louder; EOS 4.70 and 4.71-beta are about 0.24 dB right-heavy)",
+                    kind.label(),
+                    if d < 0.0 { "right" } else { "left" }
+                )
+            });
+        }
     }
     out
 }

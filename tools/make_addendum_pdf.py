@@ -56,11 +56,13 @@ td { border-bottom: 0.4pt solid #bbb; padding: 3pt; font-size: 8.6pt; }
 .rule { height: 0.3cm; }
 """
 css = css.replace('FAMILY', family)
+main, _, sub = title.partition(' Operation ')
+sub = 'Operation ' + sub if sub else ''
 html = f"""<html><head><meta charset="utf-8"><style>{css}</style></head><body>
 <div id="hdr">{title}</div>
 <div id="ftr">Unofficial update of E-mu EOS 4.70 - not made or supported by E-mu Systems / Creative - page <pdf:pagenumber/></div>
-<h1 class="title">EOS 4.71-beta</h1>
-<div class="subtitle">Operation Manual Addendum</div>
+<h1 class="title">{main}</h1>
+<div class="subtitle">{sub}</div>
 {body}
 </body></html>"""
 with open(out, 'wb') as f:

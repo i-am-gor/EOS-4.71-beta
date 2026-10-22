@@ -1,6 +1,45 @@
 # Changelog: EOS 4.70 → EOS 4.71-beta
 
-## EOS 4.71-beta2 (in progress)
+## EOS 4.71-beta2
+
+Header name **EOS 4.71-beta2**, image checksum `0886a24c`. Includes everything in EOS 4.71-beta. Every change was
+checked in the emulator against stock code paths and tested on an E4 Ultra.
+
+### New: 4 Pole LP+Fuzz filter
+- A new filter type, last in the filter list (after Peak/Shelf Morph), so all other filter numbers are unchanged.
+  It is the OB-Xa 4-pole ladder (half its resonance curve) with a drive stage that overloads the E4's filter chip.
+- Q (shown as Fuzz) raises the drive: clean at Q 0, clipping near the cutoff and then across the passband as Q
+  rises at low and medium cutoffs. It stays clean at high cutoffs (200 and up). Frequency and Q work in real time.
+
+### New: smooth resonance on the OB-Xa filters
+- The OB-Xa lowpass, highpass and band-pass models interpolate between their resonance table entries, so Q
+  changes smoothly. In 4.71-beta it moved in steps of 4 or 8; on the E4 the largest step halved.
+
+### New: Sample Edit Insert Silence
+- Utils → Silnc inserts 4 samples of silence at the chosen point (with undo), the lead-in loops and wavetables need.
+
+### New: 'Slice cord destination
+- Plays one equal-length slice of a sample per key (or controller step), counted from the zone's original key.
+  The slice length is the sample's loop. Set at note-on; works with the loop on or off, mono or stereo.
+
+### New: Beat Munger Slice key
+- Turns Beat Munger's slice points into one new sample per slice and a new preset, with slice 1 on key 36 and each
+  slice on its own key at its original pitch.
+- Each cut is placed 11 ms before Beat Munger's onset, which lags the attack, and then snapped back to the nearest
+  zero crossing within 6 ms.
+- The source loop, the clipboard and the Sample Edit selection are kept. Nothing changes if there are not enough
+  free sample slots, presets or memory.
+- Code space comes from rewriting the plugin port-map builders as a table-driven loop (2,236 → 196 bytes,
+  identical behaviour).
+
+### Changed: WTScan (formerly SLpScn)
+- Notes start at the current loop position instead of the sample start.
+- Fast source moves glide, at most 64 samples per 10 ms, so fast envelopes and wheel moves no longer burst.
+
+### Apps
+- **EOS Flasher** builds EOS 4.71-beta2 (default), EOS 4.71-beta or the original 4.70 from your EOS470.EXE.
+- **EOS Pan Test** also reports whether the pan centre is balanced, and lists 4.71-beta2 as a firmware choice.
+- Both are available for macOS 11+ (universal), macOS 10.13 High Sierra+ (Intel), Windows and Linux (Flatpak).
 
 ### Fixed: centre pan leaned slightly right
 - In EOS 4.70 and 4.71-beta, a centred pan (0, CC10 64) came out one gain step louder on the right (about

@@ -1,5 +1,6 @@
 //! EOS Pan Test: measures how far the E4's pan controls really pan (EOS 4.70 bug: voice Pan, Multimode
-//! Pan and MIDI CC10 reach hard left/right at half range; fixed in EOS 4.71-beta).
+//! Pan and MIDI CC10 reach hard left/right at half range; fixed in EOS 4.71-beta; the centre is about
+//! 0.24 dB right-heavy in 4.70 and 4.71-beta, balanced in 4.71-beta2).
 //!
 //! Sends the same editor SysEx and notes as the project's hardware tests (tools/hw_pan_test.py), records
 //! the chosen audio input pair(s) and reports L/R levels per setting. Results can be saved (CSV + WAV) and
@@ -237,7 +238,7 @@ impl eframe::App for App {
                         egui::ComboBox::from_id_salt("fw")
                             .selected_text(&self.firmware)
                             .show_ui(ui, |ui| {
-                                for f in ["EOS 4.70", "EOS 4.71-beta", "other (see notes)"] {
+                                for f in ["EOS 4.70", "EOS 4.71-beta", "EOS 4.71-beta2", "other (see notes)"] {
                                     ui.selectable_value(&mut self.firmware, f.to_string(), f);
                                 }
                             });

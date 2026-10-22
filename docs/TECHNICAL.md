@@ -1,4 +1,4 @@
-# EOS 4.70 / 4.71-beta: technical reference
+# EOS 4.70 / 4.71-beta / 4.71-beta2: technical reference
 
 ## Layout (local workspace)
 Not in the public repository (E-mu material or local data): `bin/`, `build/`, `ghidra/`, `notes/*.c`,
@@ -53,3 +53,13 @@ python3 tools/eos_lz.py fixsum patched.bin patched.bin
 python3 tools/eos_lz.py pack   patched.bin EOS_PATCHED.img
 ```
 Repacking EOS 4.70 unchanged leaves ~96 KB free on a 1.44 MB disk.
+
+## Building EOS 4.71-beta2 from source
+Starting from the EOS 4.71-beta image (`build/eos471_beta.bin`, made from the stock 4.70 image in your EOS470.EXE):
+```
+python3 tools/build_beta2.py build/eos471_beta.bin build/eos471_beta2.bin   # also writes .syms.json
+python3 tools/make_patch.py STOCK_4.70.bin build/eos471_beta2.bin apps/eos-core/data/eos471beta2.e4p
+```
+`build_beta2.py` checks every stock byte it replaces before patching. Its emulator suites, each run against stock:
+`emu_lpfuzz_rel`, `emu_silence`, `emu_slice`, `emu_slew`, `emu_sloop`, `emu_portmap`, `emu_slicer` and `emu_pan`.
+Design notes: `notes/lpfuzz.md`, `silence_insert.md`, `slice_design.md`, `slicer_design.md` and `pan_bug.md`.

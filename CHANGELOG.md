@@ -1,5 +1,82 @@
 # Changelog: EOS 4.70 → EOS 4.71-beta
 
+## EOS 4.71-beta2
+
+Header name **EOS 4.71-beta2**, image checksum `0886a24c`. Includes everything in EOS 4.71-beta. Every change was
+checked in the emulator against stock code paths and tested on an E4 Ultra.
+
+### New: 4 Pole LP+Fuzz filter
+- A new filter type, last in the filter list (after Peak/Shelf Morph), so all other filter numbers are unchanged.
+  It is the OB-Xa 4-pole ladder (half its resonance curve) with a drive stage that overloads the E4's filter chip.
+- Q (shown as Fuzz) raises the drive: clean at Q 0, clipping near the cutoff and then across the passband as Q
+  rises at low and medium cutoffs. It stays clean at high cutoffs (200 and up). Frequency and Q work in real time.
+
+### New: smooth resonance on the OB-Xa filters
+- The OB-Xa lowpass, highpass and band-pass models interpolate between their resonance table entries, so Q
+  changes smoothly. In 4.71-beta it moved in steps of 4 or 8; on the E4 the largest step halved.
+
+### New: Sample Edit Insert Silence
+- Utils → Silnc inserts 4 samples of silence at the chosen point (with undo), the lead-in loops and wavetables need.
+
+### New: 'Slice cord destination
+- Plays one equal-length slice of a sample per key (or controller step), counted from the zone's original key.
+  The slice length is the sample's loop. Set at note-on; works with the loop on or off, mono or stereo.
+
+### New: Beat Munger Slice key
+- Turns Beat Munger's slice points into one new sample per slice and a new preset, with slice 1 on key 36 and each
+  slice on its own key at its original pitch.
+- Each cut is placed 11 ms before Beat Munger's onset, which lags the attack, and then snapped back to the nearest
+  zero crossing within 6 ms.
+- The source loop, the clipboard and the Sample Edit selection are kept. Nothing changes if there are not enough
+  free sample slots, presets or memory.
+- Code space comes from rewriting the plugin port-map builders as a table-driven loop (2,236 → 196 bytes,
+  identical behaviour).
+
+### Changed: WTScan (formerly SLpScn)
+- Notes start at the current loop position instead of the sample start.
+- Fast source moves glide, at most 64 samples per 10 ms, so fast envelopes and wheel moves no longer burst.
+
+### Apps
+- **EOS Flasher** builds EOS 4.71-beta2 (default), EOS 4.71-beta or the original 4.70 from your EOS470.EXE.
+- **EOS Pan Test** also reports whether the pan centre is balanced, and lists 4.71-beta2 as a firmware choice.
+- Both are available for macOS 11+ (universal), macOS 10.13 High Sierra+ (Intel), Windows and Linux (Flatpak).
+
+### Fixed: centre pan leaned slightly right
+- In EOS 4.70 and 4.71-beta, a centred pan (0, CC10 64) came out one gain step louder on the right (about
+  0.24 dB measured).
+- **Cause:** E-mu's pan gain table has 128 entries, so the true centre falls between entries 63 and 64. Pan 0
+  reads entry 64 for one side and entry 63 for the other.
+- **Fix:** beta2 gives those two entries the same value. Centre is now exactly balanced, and every other pan
+  setting is unchanged.
+
+Pan schemes compared (gain steps of about 0.24 dB; L − R = left minus right):
+
+| Setting | EOS 4.70 | EOS 4.71-beta (beta1) | EOS 4.71-beta2 |
+|---|---|---|---|
+| Hard left | at −32 (CC10 32); −33…−64 do nothing | at −64 (CC10 0) | at −64 (CC10 0) |
+| −32 (CC10 32) | hard left | about 16 dB left | about 16 dB left |
+| −1 (CC10 63) | 2 steps left-heavy | 1 step left-heavy | **balanced** |
+| 0 (CC10 64) | 1 step right-heavy (−0.24 dB) | 1 step right-heavy (−0.24 dB) | **balanced (0 dB)** |
+| +32 (CC10 96) | hard right | about 16 dB right | about 16 dB right |
+| Hard right | at +32 (CC10 96); +33…+63 do nothing | at +63 (CC10 127) | at +63 (CC10 127) |
+| Pan gain table entries 63 / 64 | −322 / −311 | −322 / −311 | −316 / −316 |
+
+Verified in the emulator, running the real pan routine for every pan and level against stock, and on the E4
+(Quantum 19/20, preset 000 sine).
+
+| Measured L − R on the E4 | Voice Pan | CC10 |
+|---|---|---|
+| Centre | 0.00 dB at −1 and 0 (beta1: −0.24 dB at 0) | 0.00 dB at 63 and 64 |
+| One step either side | +0.77 dB at −2, −0.79 dB at +1 | −0.78 dB at 65 |
+
+### Renamed: SLpScn → WTScan
+- The transwave/wavetable scan cord destination **SLpScn** is now called **WTScan**. Only the name has changed;
+  beta1 presets play unchanged.
+
+---
+
+## EOS 4.71-beta
+
 EOS 4.71-beta is an unofficial update of E-mu's EOS 4.70 for the Emulator IV family **Ultra** models
 (ColdFire MCF5206e), built by patching the original 4.70 image. It is not made, supported or endorsed by
 E-mu Systems / Creative. Header name **EOS 4.71-beta**, image checksum `0887f4e6`.
@@ -58,7 +135,7 @@ E-mu E4 Ultra with an RFX card, with measurements recorded from its outputs.
   pan sum was scaled twice too large, so ±32 (CC10 32/96) was already hard left/right and the outer half of
   every pan control did nothing. Now ±64 (CC10 0/127) is hard, ±32 is about 16 dB between the sides.
 - Verified on the main outputs and the sub outputs 1–3. (A 0.25 dB right-heavy centre offset from E-mu's
-  pan table remains.)
+  pan table remains; fixed in beta2, see above.)
 - Test it yourself with the **EOS Pan Test** app and the bank in `testbank/` (see README).
 
 ### MIDI clock counted twice

@@ -1,21 +1,34 @@
-# EOS 4.71-beta Operation Manual Addendum
+# EOS 4.71-beta2 Operation Manual Addendum
 
-This is the Operation Manual Addendum for **EOS version 4.71-beta**, an unofficial update of E-mu's
-EOS 4.70 for the **E4 Ultra** family of synthesizer/samplers. This revision includes Oberheim OB-Xa
-filter models, tempo-synced LFOs, transwave scanning of sample loops, a MIDI clock that keeps running
-when your sequencer stops, and a fix for the pan controls.
+This is the Operation Manual Addendum for **EOS version 4.71-beta2**, an unofficial update of E-mu's
+EOS 4.70 for the **E4 Ultra** family of synthesizer/samplers. It includes everything in EOS 4.71-beta:
+Oberheim OB-Xa filter models, tempo-synced LFOs, transwave scanning of sample loops, a MIDI clock that keeps
+running when your sequencer stops, and a fix for the pan controls.
+
+**New in 4.71-beta2:** the **4 Pole LP+Fuzz** filter and smoother resonance steps, **Insert Silence** in
+Sample Edit, the **'Slice** cord destination, a **Slice** key in Beat Munger that turns a loop into a sliced
+preset, **WTScan** improvements (notes start at the loop, fast moves glide), and a balanced pan centre.
 
 Read this addendum together with the EOS 4.7 Operation Manual and the EOS 4.7 Operation Manual Addendum.
 Everything not mentioned here works as described there.
 
-> **Note:** EOS 4.71-beta is not made, supported or endorsed by E-mu Systems or Creative Technology.
+> **Note:** EOS 4.71-beta2 is not made, supported or endorsed by E-mu Systems or Creative Technology.
 > It is a beta: back up your banks before installing it. You can return to EOS 4.70 at any time.
+
+### Names Changed in EOS 4.71-beta2
+
+| Feature | EOS 4.71-beta (beta1) | EOS 4.71-beta2 |
+|---|---|---|
+| Transwave / wavetable scan cord destination | **SLpScn** | **WTScan** |
+
+Only the name has changed: the destination works the same way. Presets saved with an SLpScn cord in
+beta1 load and play unchanged in beta2 and show WTScan.
 
 ---
 
-## To Install EOS version 4.71-beta
+## To Install EOS version 4.71-beta2
 
-EOS 4.71-beta is built on your computer from E-mu's own EOS 4.70 update file (**EOS470.EXE**) and
+EOS 4.71-beta2 is built on your computer from E-mu's own EOS 4.70 update file (**EOS470.EXE**) and
 sent to the E4 over MIDI. No floppy disk is needed.
 
 You need:
@@ -23,13 +36,13 @@ You need:
 - E-mu's **EOS470.EXE** (the EOS 4.70 update file).
 - A MIDI interface connected **both ways**: computer MIDI Out → E4 MIDI In, and E4 MIDI Out →
   computer MIDI In. The E4 answers every packet during the transfer.
-- The **EOS Flasher** application (macOS or Windows).
+- The **EOS Flasher** application (macOS, Windows or Linux).
 
-**To build and send EOS 4.71-beta:**
+**To build and send EOS 4.71-beta2:**
 
 1. Start **EOS Flasher** and press **Choose EOS470.EXE…**. Select the file. The flasher confirms
    "original E-mu EOS v4.70 found and verified".
-2. Select **EOS 4.71-beta** and press **Build**. (Optionally press **Save .syx…** to keep a copy.)
+2. Select **EOS 4.71-beta2** and press **Build**. (Optionally press **Save .syx…** to keep a copy.)
 3. Select the MIDI **Output to E4** and the MIDI **Input from E4**.
 4. Press **Send to E4**.
 5. Turn the E4 on while holding the **Enter** button. When the display asks
@@ -37,9 +50,10 @@ You need:
    starts; the flasher shows its progress (about 9 minutes).
 6. When the transfer is complete the E4 checks the new software and asks **"Burn to flash?"**.
    Press **Yes**. Do not turn the E4 off while it writes to flash.
-7. The E4 restarts. The startup screen shows **EOS 4.71-beta**.
+7. The E4 restarts. The startup screen shows **EOS 4.71-beta2**.
 
-**To return to EOS 4.70:** repeat the procedure and select **Original EOS 4.70** in step 2.
+**To return to EOS 4.70:** repeat the procedure and select **Original EOS 4.70** in step 2. The flasher
+can also build the earlier **EOS 4.71-beta**.
 
 > **Note:** If the flasher reports "header not acknowledged", check that the E4's MIDI Out is connected
 > to the selected MIDI input and that the E4 is showing "Searching for OS…".
@@ -52,7 +66,7 @@ The lowpass, highpass and bandpass filter types below now model the filters of t
 which are built on the Curtis CEM3320 filter chip. Filter type names and numbers are unchanged, so
 existing presets load as before and use the new models.
 
-| Filter type | 4.71-beta model |
+| Filter type | 4.71-beta2 model |
 |---|---|
 | 2 Pole Lowpass | OB-Xa 2-pole state-variable lowpass (12 dB/oct) |
 | 4 Pole Lowpass | OB-Xa 4-pole ladder lowpass (24 dB/oct) |
@@ -72,6 +86,23 @@ existing presets load as before and use the new models.
 
 > **Note:** The E4's filter hardware is linear, so the OB-Xa's saturation and self-oscillation are not
 > reproduced.
+
+**Smoother resonance (new in 4.71-beta2):** the OB-Xa lowpass, highpass and bandpass filters now change
+resonance smoothly through the whole **Q** range. In 4.71-beta, Q moved in steps of 4 or 8 values.
+
+### 4 Pole LP+Fuzz (new in 4.71-beta2)
+
+**4 Pole LP+Fuzz** is a new filter type: the OB-Xa 4-pole ladder lowpass with a drive stage that pushes the
+E4's filter chip into overload. It is the **last entry in the filter type list** (after Peak/Shelf Morph), so
+the numbers of all other filter types are unchanged.
+
+- **Frequency** sets the lowpass cutoff, as on the 4 Pole Lowpass.
+- **Q** (shown as **Fuzz**) sets the drive and the resonance together. At Q 0 the filter is clean. As Q rises,
+  the resonance rises (half as much as on the 4 Pole Lowpass) and the drive increases until the filter clips.
+- The fuzz is strongest at low and medium cutoffs. Around a cutoff of 96 it starts to clip near the cutoff
+  frequency from about Q 64, and across the whole passband from about Q 96. At high cutoffs (200 and up) it
+  stays clean.
+- Frequency and Q can both be modulated in real time (FilFreq and FilRes cords).
 
 ---
 
@@ -145,9 +176,31 @@ Short dropouts in the clock (under 250 ms) are caught up, so the LFOs stay in ti
 
 ---
 
-## Transwave Scanning: the SLpScn Cord Destination
+## Sample Edit: Insert Silence (new in 4.71-beta2)
 
-The new cord destination **SLpScn** (sample loop scan) slides a sample's loop window through the
+**Insert Silence** adds 4 samples of silence at a point in a sample. Use it to give a loop or a wavetable the
+lead-in it needs: the E4 does not allow a loop to start before sample 2, so slices and transwave frames
+should start after a few samples of silence.
+
+**To insert silence:**
+
+1. In **Sample Edit**, press **Utils** (F1), then **Silnc** (F6).
+2. The display shows "Paste Section" (Insert Silence works like Paste). Set **Side** to **Both**.
+3. Press **OK** (F6).
+4. Set the start point with the data wheel where the silence should go (usually the start of the sample).
+5. Press **OK** (F6). Four samples of silence are inserted at that point.
+
+**Undo** removes them again (it is labelled "Paste Section").
+
+---
+
+## Transwave Scanning: the WTScan Cord Destination
+
+> **Name change:** in EOS 4.71-beta (beta1) this destination is called **SLpScn** (sample loop scan). In
+> EOS 4.71-beta2 it is called **WTScan** (wavetable scan). Only the name has changed: it works the same way, and
+> presets made with SLpScn cords play unchanged and show WTScan.
+
+The new cord destination **WTScan** (wavetable scan) slides a sample's loop window through the
 sample while the note plays. With a sample made of a series of single-cycle waveforms ("frames"), the
 loop moves from frame to frame: Ensoniq-style transwave and wavetable sounds.
 
@@ -157,18 +210,23 @@ loop moves from frame to frame: Ensoniq-style transwave and wavetable sounds.
    silence**, then the frames. Loop it on its first frame (forward or alternating loop, Start 2).
 2. Assign the sample to a voice.
 3. On the **Cords** page, choose a source (for example **ModWl**, **Lfo1+** or an envelope), set the
-   destination to **SLpScn** and the amount to **+100**.
+   destination to **WTScan** and the amount to **+100**.
 4. Play a note and move the source: the sound changes as the loop moves through the frames.
+
+**Notes:**
 
 - At **+100**, a full-scale source moves the loop from frame 1 to the end of the sample;
   **−100** moves it towards the start. Smaller amounts cover proportionally less; several cords add up.
 - The loop position is updated every 10 ms and always stays inside the sample.
 - Positions between frames blend the two neighbouring frames (no crossfade).
 - The existing **SLoop** destination is unchanged (small loop offsets, about 127 samples per full cord).
+- **New in 4.71-beta2:** a note now starts at the current loop position, not at the start of the sample.
+- **New in 4.71-beta2:** fast source moves glide, at most 64 samples per 10 ms, so a fast envelope or a quick
+  mod-wheel move does not make a burst of noise.
 
 ### Building Transwave Samples
 
-SLpScn slides the sample's loop window through the sample while the note plays. How you build the sample
+WTScan slides the sample's loop window through the sample while the note plays. How you build the sample
 decides how far it can travel and how many waveforms (frames) it can reach.
 
 **Rules**
@@ -184,7 +242,7 @@ decides how far it can travel and how many waveforms (frames) it can reach.
   at most 32,767 samples from where the loop is set (about 0.74 s at 44.1 kHz, 0.68 s at 48 kHz). The
   loop is also kept inside the sample.
 - **Keep the whole sample within reach:** sample length ≤ 2 + 32,768 samples (with the loop on frame 1).
-  Longer samples still play, but SLpScn's range is scaled to the whole sample, so the part of the
+  Longer samples still play, but WTScan's range is scaled to the whole sample, so the part of the
   controller travel aimed beyond the reachable area just holds at the limit.
 
 **Maximum number of frames** (loop on frame 1; frames × frame size ≤ 32,768)
@@ -218,7 +276,116 @@ E4's resampling dulls high harmonics more when a frame has few samples per cycle
   samples per full cord).
 
 **Example:** the test bank's **WT test** presets use a table of 32 frames of 256 samples with 2 lead-in
-samples (8,194 samples, loop 2–258). Use Mod Wheel → SLpScn +100.
+samples (8,194 samples, loop 2–258). Use Mod Wheel → WTScan +100.
+
+---
+
+## Beat Slicing: the 'Slice Cord Destination (new in 4.71-beta2)
+
+The new cord destination **'Slice** plays one slice of a sample per key, like a sliced drum loop in a
+dedicated slicer. The slices are equal-length sections of one sample, so no new samples are made and no
+extra sample memory is used. As with **'SStart**, the apostrophe means the slice is chosen when the note
+starts.
+
+**To slice a loop:**
+
+1. Prepare the sample as equal-length slices, one after another, for example a one-bar loop at an exact
+   tempo with 16 equal steps. Start it with **at least 2 samples of silence**: the E4 does not allow a loop to
+   start before sample 2. **Insert Silence** (Sample Edit, Utils, Silnc) adds 4.
+2. In Sample Edit, set the **loop** on the first slice: Loop Start = the start of slice 1, Loop End = the end
+   of slice 1. The loop length is the slice length.
+   - **Loop off:** each slice plays once and stops at its end.
+   - **Loop on:** each slice loops on itself while the key is held.
+3. Assign the sample to a voice. The voice's **Original Key** is the key that plays slice 1.
+4. On the **Cords** page, set the source to **Key+**, the destination to **'Slice** and the amount to **+100**.
+5. Play the Original Key for slice 1, the next key up for slice 2, and so on.
+
+**Notes:**
+
+- Keys above the last slice play the last slice; keys below the Original Key play the first slice (or
+  slices before the loop, if the sample has whole slices before it).
+- Stereo samples are sliced on both sides.
+- **SStart** still works: it offsets the start point inside the slice.
+- With a controller source, such as **ModWl** at +100, the controller value counted from the Original Key
+  picks the slice: value = Original Key plays slice 1, each step up the next slice.
+- The slice is set at note-on; moving the source during a note does not change the slice.
+- 'Slice and **WTScan** share the same cord sum: do not use both on one voice.
+
+### 'Slice and WTScan compared
+
+Both destinations read the sample's loop, but they do different jobs: **'Slice** is a slicer,
+**WTScan** is a transwave scanner.
+
+| | **'Slice** | **WTScan** |
+|---|---|---|
+| When it acts | Once, at note-on | At note-on, then every 10 ms while the note plays |
+| Where the note starts | At the start of slice *n* | At the current loop position (not the sample start) |
+| What moves | Play start and end (and the loop, if on) jump to slice *n* | The loop window slides through the sample |
+| Steps | Whole slices, snapped | Continuous: in-between positions blend neighbouring frames |
+| Fast moves | — | Glide: at most 64 samples per 10 ms, so fast sources do not burst |
+| Scale | One slice per key or controller step, from the Original Key | Full scale (+100, source at max) sweeps the whole sample |
+| Loop off | Works: each slice plays once | Does nothing; it needs a forward loop |
+
+Use **'Slice** for sliced drum loops and phrases, and **WTScan** for evolving wavetable and transwave sounds.
+Do not use both on one voice: they share one cord sum, and on a voice with a 'Slice cord the WTScan
+scan is switched off.
+
+---
+
+## Beat Munger: Slice to Samples and Preset (new in 4.71-beta2)
+
+The new **Slice** soft key in Beat Munger turns a drum loop into a playable kit, like a dedicated loop slicer. It
+uses the slice points Beat Munger finds, makes one new sample per slice and builds a new preset with each slice on
+its own key.
+
+**To slice a loop:**
+
+1. In Sample Edit, select the loop and open **Beat Munger**.
+2. Adjust Beat Munger's settings, using **re-Anlyz** and **Play**, until the slices fall on the hits you want.
+3. Press **Slice** (the soft key between Cancel and Stop).
+
+The E4 then:
+
+- makes one new sample per slice in the first free sample locations, named after the loop with a slice number, for
+  example `Amen Break 01`, `Amen Break 02`, …;
+- makes a new preset in the first free preset location, named after the loop;
+- maps slice 1 to key 36 (C1), slice 2 to the next key up, and so on. Each slice's original key is its own key, so
+  every slice plays back at its original pitch;
+- leaves Beat Munger and selects the new preset, with the message **Sliced: n samples, preset p**.
+
+Notes:
+
+- The original loop is not changed, and the sample clipboard and the Sample Edit selection are kept.
+- Each cut is placed just before its hit, so attacks are not clipped. It then moves to the nearest point where the
+  waveform crosses zero, so slices start without a click.
+- Slice 1 starts at the beginning of the loop, and the last slice runs to its end, so the slices play back to back
+  as the complete loop.
+- Slices are uneven in length because they follow the hits in the loop: a slice runs from one hit to the next.
+- Hits closer than about 23 ms are kept in one slice. A preset holds at most 92 slices (keys 36 to 127).
+- Mono and stereo loops can both be sliced.
+- Each slice takes the loop's loop setting: if the loop is set to loop, so is every slice.
+- Slicing uses new sample memory about the size of the loop.
+
+**Messages:**
+
+| Message | Meaning |
+|---|---|
+| Slice: no slices to make | Beat Munger has found no slices, or the sample is too short. |
+| Slice: no free sample slots/preset | There are not enough free sample locations for the slices, or no free preset. Nothing is changed. |
+| Slice: not enough sample memory | There is not enough free sample memory. Nothing is made; Beat Munger closes. |
+
+If Beat Munger is still playing when you press Slice, slicing starts when playback stops.
+
+### Slicing compared
+
+| | **Beat Munger Slice** | **'Slice cord** |
+|---|---|---|
+| Slice points | At the hits Beat Munger finds | Equal lengths, set by the loop |
+| What it makes | New samples and a new preset | Nothing: it plays sections of one sample |
+| Sample memory | About one more copy of the loop | None |
+| Editing slices | Each slice is its own sample | Edit the one sample |
+
+Use **Beat Munger Slice** for real drum loops with uneven hits, and the **'Slice** cord for loops cut into equal steps.
 
 ---
 
@@ -226,13 +393,18 @@ samples (8,194 samples, loop 2–258). Use Mod Wheel → SLpScn +100.
 
 **Corrected in this version:** in EOS 4.70 every pan control reached hard left or hard right at half its
 range: voice **Pan** at −32/+32, Multimode (mixer) **Pan** at −32/+32, MIDI **controller 10** at 32/96, and
-**AmpPan** cords at about half their amount. The outer half of each control did nothing. In 4.71-beta the
+**AmpPan** cords at about half their amount. The outer half of each control did nothing. Since 4.71-beta the
 full range is used:
 
 | Setting | −64 / CC 0 | −32 / CC 32 | −16 / CC 48 | 0 / CC 64 | +16 / CC 80 | +32 / CC 96 | +63 / CC 127 |
 |---|---|---|---|---|---|---|---|
 | Left − Right, EOS 4.70 | +72 dB | +72 dB (hard) | +15 dB | −0.2 dB | −16 dB | −72 dB (hard) | −72 dB |
 | Left − Right, EOS 4.71-beta | +72 dB | +16 dB | +6 dB | −0.2 dB | −7 dB | −16 dB | −72 dB |
+| Left − Right, EOS 4.71-beta2 | +72 dB | +16 dB | +6 dB | **0.0 dB** | −7 dB | −16 dB | −72 dB |
+
+**Balanced centre (new in 4.71-beta2):** in EOS 4.70 and 4.71-beta a centred pan came out about 0.24 dB louder
+on the right, because E-mu's pan table has no exact middle entry. In 4.71-beta2 the centre (pan 0 and −1,
+CC10 63 and 64) is exactly balanced; all other settings are unchanged.
 
 Presets that relied on the old behaviour (pan set to ±32 for a hard-panned sound) now sit half-way
 between the centre and the side; set them to ±64 for a hard pan.
@@ -253,7 +425,7 @@ system.
 
 ## Pan Test Application
 
-**EOS Pan Test** (macOS and Windows) measures how far the E4's pan controls really pan.
+**EOS Pan Test** (macOS, Windows and Linux) measures how far the E4's pan controls really pan.
 
 **To run the pan test:**
 
@@ -265,7 +437,8 @@ system.
    audio device and the input pair(s) the E4 is connected to.
 4. Choose the tests (voice Pan, Multimode Pan, MIDI CC10) and press **Run tests**.
 5. The results table shows the left and right levels for every setting, and the summary tells you
-   whether the pan bug is present ("hard left/right at half range") or fixed ("full pan range").
+   whether the pan bug is present ("hard left/right at half range") or fixed ("full pan range"), and whether
+   the centre is balanced (4.71-beta2) or about 0.24 dB right-heavy (4.70 and 4.71-beta).
 6. Press **Save CSV + WAV…** to keep the measurements, and **Report to GitHub…** to send them to the
    project as a report (your browser opens a pre-filled report for you to review and submit).
 
@@ -280,5 +453,7 @@ system.
   sequencer stopped.
 - While the MIDI clock is stopped, the clock keeps the last tempo within about 0.2 % (LFOs) and 2 %
   (clock sources).
-- A small 0.25 dB right-heavy offset at the pan centre (from E-mu's pan table) remains.
-- EOS 4.71-beta runs on Ultra models only, like EOS 4.70.
+- Beat Munger **Slice** makes at most 92 slices (keys 36 to 127). A slice can start with a small click where the
+  waveform has no zero crossing near the cut.
+- **'Slice** and **WTScan** share one cord sum: do not use both on one voice.
+- EOS 4.71-beta2 runs on Ultra models only, like EOS 4.70.

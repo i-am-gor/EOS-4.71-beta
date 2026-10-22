@@ -34,3 +34,18 @@ at about half the amount). Centre is 0.24 dB right-heavy (see pan law below).
 ## Fixed in Sync8 (verified on hardware 2026-10-18)
 Voice Pan, Multimode Pan and CC10 sweep the full range (L-R +72 / +16 / -0.25 / -16 / -72 dB at
 -64 / -32 / 0 / +32 / +63), identically on the main outputs and Sub 1-3. The 0.25 dB centre offset remains.
+
+## Centre offset fixed in EOS 4.71-beta2 (2026-10-22, verified in the emulator and on hardware)
+The chip writer 0x60784 gives one side table[i] >> 4 and the other table[i ^ 0x7F] >> 4, writing them to chan+113
+and chan+115; the table at 0x61590 has no other reader. At centre (pan 0, index 64) that is table[64] = -311 → -20
+and table[63] = -322 → -21, one step louder on one side; the user hears it on the right.
+
+**Fix (build_beta2.py PAN_FIX):** entries 63 and 64 both = -316, giving -20/-20. Centre is exactly balanced and
+pan -1 is centre too; every other pan is unchanged.
+
+**Check:** `tools/emu_pan.py` runs the real 0x60784 in stock and beta2 for every pan and six levels (768 checks).
+Result: centre goes from (108, 107) to (108, 108), and every other setting is identical.
+
+**Hardware (build 0886a24c, preset 000 sine, `hw_pan_test.py`; results in `hw/pan_beta2/`, local):**
+- Voice Pan: L − R is 0.00 dB at −1 and 0, +0.77 dB at −2 and −0.79 dB at +1; ±64/63 are hard (±60 dB).
+- CC10: 0.00 dB at 63 and 64, −0.78 dB at 65.

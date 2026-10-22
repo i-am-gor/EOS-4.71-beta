@@ -36,6 +36,14 @@ def tdiv(a, b):                       # ColdFire divs/divu: truncate toward zero
     return q if (a >= 0) == (b > 0) else -q
 
 
+SNAP = False                      # beta2 (build_beta2.py): SLpScn moves in whole frames (patches/slpscn/snap.s)
+
+
+def s32(v):
+    v &= 0xffffffff
+    return v - (1 << 32) if v & 0x80000000 else v
+
+
 def model(base, sloop, acc, mode, ltype, s0, s1, ls, le):
     stock = base + (sloop >> 5)
     if acc == 0 or not (1 <= ltype <= 2):
@@ -45,7 +53,10 @@ def model(base, sloop, acc, mode, ltype, s0, s1, ls, le):
         return stock
     lo, hi = (s0 - ls) >> 1, ((s1 - le) >> 1) + 1   # sample end inclusive, loop end exclusive
     R = hi if acc >= 0 else -lo
-    sh = acc * (R // FULL) + tdiv(acc * (R % FULL), FULL)
+    if SNAP:                                       # round(sum * floor(R / L) / 4032) * L, 32-bit like the code
+        sh = s32(tdiv(s32(s32(acc * ((R & 0xffffffff) // L)) + FULL // 2), FULL) * L)
+    else:
+        sh = acc * (R // FULL) + tdiv(acc * (R % FULL), FULL)
     tot = stock + sh
     tot = max(lo, min(hi, tot))
     return max(-32767, min(32767, tot))
@@ -78,6 +89,9 @@ class Emu:
 
 
 def main():
+    global SNAP
+    import os as _os
+    SNAP = False                                   # frame stepping not applied (glide instead)
     base_img, img = (open(p, 'rb').read() for p in sys.argv[1:3])
     sym = {}
     for line in open('patches/lfosync/lfosync.elf', 'rb').read().split(b'\0'):
@@ -148,8 +162,12 @@ def main():
     steps = sorted(set(b_ - a_ for a_, b_ in zip(sweep, sweep[1:])))
     print(f'  Mod Wheel 0..127 -> loop start shift {sweep[0]}..{sweep[-1]} (last frame start 7936), step sizes {steps[0]}..{steps[-1]} samples')
 
-    # 2. LFO init no longer writes voice+0x1E (no mode flag)
-    for dst, lfo in ((58, 1), (55, 1), (58, 2)):
+    # beta2 (build_beta2.py: Slice on destination 55): hooks go through shift_w, LFO 1 init flags dst 55 cords
+    import json, os
+    beta2 = os.path.exists(sys.argv[2] + '.syms.json')
+    bsym = json.load(open(sys.argv[2] + '.syms.json')) if beta2 else {}
+    # 2. LFO init writes voice+0x1E only for Slice (beta2: LFO 1, dst 55)
+    for dst, lfo in ((58, 1), (55, 1), (58, 2), (55, 2)):
         E.mu.mem_write(VOICE, bytes(0x400)); E.mu.mem_write(PARAMS, bytes(0x100))
         E.w(PARAMS, 'BBBBB', 64, 1, 0, 0, 0)
         E.w(0x1000229C, 'I', 1); E.w(0x10000450, 'I', 1000); E.w(0x10000434, 'I', 960)
@@ -160,22 +178,25 @@ def main():
         else:
             E.call(0x61CDC, VOICE + 0x1A8, PARAMS)
         n += 1
-        if E.r(VOICE + 0x1E, 'h')[0] != 7:
-            fails.append(f'LFO{lfo} init wrote voice+0x1E (dst {dst})')
+        want = 0x107 if (beta2 and dst == 55 and lfo == 1) else 7     # beta2: flag byte 0x1E, 0x1F kept
+        if E.r(VOICE + 0x1E, 'h')[0] != want:
+            fails.append(f'LFO{lfo} init: voice+0x1E {E.r(VOICE + 0x1E, "h")[0]} != {want} (dst {dst})')
 
     # 3. hooks and destinations
     for a in (0x5FBA6, 0x5FECA):
         n += 1
-        if img[a - BASE:a - BASE + 16] != b'\x4e\xb9' + struct.pack('>I', sym['sl_shift']) + b'\x4e\x71' * 5:
+        tgt = (bsym['shift_t'] if a == 0x5FECA else bsym['shift_w']) if beta2 else sym['sl_shift']
+        want = b'\x4e\xb9' + struct.pack('>I', tgt) + (b'' if (beta2 and a == 0x5FECA) else b'\x4e\x71' * 5)
+        if img[a - BASE:a - BASE + len(want)] != want:
             fails.append(f'hook {a:#x} not patched')
         if base_img[a - BASE:a - BASE + 16].hex() != '3e2d001c322d000a48c748c1ea81de81':
             fails.append(f'base image at {a:#x} not stock')
-    for code, name, off_want in ((58, 'SLpScn', 0x1C), (55, '', 0x1E)):
+    for code, name, off_want in ((58, 'WTScan' if beta2 else 'SLpScn', 0x1C), (55, "'Slice", 0x1C) if beta2 else (55, '', 0x1E)):
         p_, off, fl = struct.unpack('>IHH', img[DEST_TABLE + 8 * code - BASE:DEST_TABLE + 8 * code + 8 - BASE])
         nm = img[p_ - BASE:p_ - BASE + 8].split(b'\0')[0].decode('latin1')
         n += 1
         if (nm, off) != (name, off_want) or img[DEST_TABLE + 8 * code - BASE:DEST_TABLE + 8 * code + 8 - BASE] != (
-                base_img[DEST_TABLE + 8 * code - BASE:DEST_TABLE + 8 * code + 8 - BASE] if code == 55 else
+                base_img[DEST_TABLE + 8 * code - BASE:DEST_TABLE + 8 * code + 8 - BASE] if (code == 55 and not beta2) else
                 img[DEST_TABLE + 8 * code - BASE:DEST_TABLE + 8 * code + 8 - BASE]):
             fails.append(f'destination {code}: {nm!r} {off:#x} {fl:#x}')
     listed = sum(1 for c in range(0xC0)
@@ -184,8 +205,8 @@ def main():
                   if struct.unpack('>H', base_img[DEST_TABLE + 8 * c + 4 - BASE:DEST_TABLE + 8 * c + 6 - BASE])[0] != 0x1E)
     print(f'  destinations listed: {listed0} -> {listed}')
     n += 1
-    if listed != listed0 + 1:
-        fails.append('destination count did not grow by 1')
+    if listed != listed0 + (2 if beta2 else 1):
+        fails.append('destination count did not grow as expected')
 
     print(f'{n} checks; {len(fails)} failures')
     for f in fails[:20]:

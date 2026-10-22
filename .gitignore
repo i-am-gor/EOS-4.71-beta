@@ -18,6 +18,8 @@ patches/**/*.elf
 patches/**/*.bin
 patches/**/*.ld
 patches/**/tables.inc
+patches/portmap/rows.inc
+hw/**/*.wav
 patches/rfx/rfx_v*.s
 __pycache__/
 *.pyc
@@ -30,3 +32,5 @@ apps/target-*/
 .flatpak-builder/
 flatpak-build/
 *.flatpak
+patches/p2k/fit/
+patches/p2k/fit6.inc

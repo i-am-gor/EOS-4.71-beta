@@ -1,5 +1,5 @@
-//! EOS 4.71-beta patch. Contains only the bytes that differ from stock EOS 4.70 (all written for this
-//! project); it is applied to the user's own 4.70 image and both ends are checked by SHA-256.
+//! EOS 4.71-beta patches. Each contains only the bytes that differ from stock EOS 4.70 (all written for
+//! this project); it is applied to the user's own 4.70 image and both ends are checked by SHA-256.
 //!
 //! Format (big-endian): b"E4PATCH1", sha256(stock) 32, sha256(patched) 32, u32 image length,
 //! u8 name length, name, u32 range count, then per range u32 offset, u32 length, bytes.
@@ -7,7 +7,29 @@
 
 use sha2::{Digest, Sha256};
 
-pub const PATCH: &[u8] = include_bytes!("../data/eos471beta.e4p");
+/// EOS 4.71-beta (beta1).
+pub const BETA1: &[u8] = include_bytes!("../data/eos471beta.e4p");
+/// EOS 4.71-beta2.
+pub const BETA2: &[u8] = include_bytes!("../data/eos471beta2.e4p");
+
+/// Which OS to build from the user's EOS 4.70.
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum Version {
+    Beta2,
+    Beta1,
+    Original,
+}
+
+impl Version {
+    /// The embedded patch for this version (none for the original 4.70).
+    pub fn patch(self) -> Option<&'static [u8]> {
+        match self {
+            Version::Beta2 => Some(BETA2),
+            Version::Beta1 => Some(BETA1),
+            Version::Original => None,
+        }
+    }
+}
 
 pub struct Patch<'a> {
     pub stock_sha: &'a [u8],
@@ -49,33 +71,57 @@ pub fn sha256(d: &[u8]) -> Vec<u8> {
     Sha256::digest(d).to_vec()
 }
 
-/// Checks that `img` is exactly the stock EOS 4.70 image the patch was made for.
+/// Checks that `img` is exactly the stock EOS 4.70 image the patches were made for.
 pub fn check_stock(img: &[u8]) -> Result<(), String> {
-    let p = parse(PATCH)?;
+    let p = parse(BETA1)?;
     if img.len() != p.len || sha256(img) != p.stock_sha {
         return Err("this is not the original E-mu EOS 4.70 image (SHA-256 mismatch)".into());
     }
     Ok(())
 }
 
-/// Applies the 4.71-beta patch to stock 4.70 and verifies the result.
-pub fn apply(stock: &[u8]) -> Result<Vec<u8>, String> {
+/// Applies a patch to stock 4.70 and verifies the result.
+pub fn apply(stock: &[u8], patch: &[u8]) -> Result<Vec<u8>, String> {
     check_stock(stock)?;
-    let p = parse(PATCH)?;
+    let p = parse(patch)?;
+    if p.stock_sha != parse(BETA1)?.stock_sha {
+        return Err("patch was not made for EOS 4.70".into());
+    }
     let mut img = stock.to_vec();
     for (off, data) in &p.ranges {
         img[*off..*off + data.len()].copy_from_slice(data);
     }
     if sha256(&img) != p.out_sha {
-        return Err("patched image does not match EOS 4.71-beta (SHA-256)".into());
+        return Err(format!("patched image does not match {} (SHA-256)", p.name));
     }
     crate::image::verify(&img)?;
     Ok(img)
 }
 
-/// (name, ranges, patched bytes)
-pub fn info() -> (String, usize, usize) {
-    let p = parse(PATCH).expect("embedded patch");
+/// (name, ranges, patched bytes) of a patch.
+pub fn info(patch: &[u8]) -> (String, usize, usize) {
+    let p = parse(patch).expect("embedded patch");
     let bytes = p.ranges.iter().map(|(_, d)| d.len()).sum();
     (p.name, p.ranges.len(), bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn embedded_patches() {
+        let (a, b) = (parse(BETA1).unwrap(), parse(BETA2).unwrap());
+        assert_eq!(a.stock_sha, b.stock_sha, "both patches apply to the same EOS 4.70");
+        assert_eq!(a.len, b.len);
+        assert_eq!(a.name, "EOS 4.71-beta");
+        assert_eq!(b.name, "EOS 4.71-beta2");
+        for p in [&a, &b] {
+            let mut last = 0;
+            for (off, d) in &p.ranges {
+                assert!(*off >= last && !d.is_empty(), "ranges sorted and non-empty");
+                last = off + d.len();
+            }
+        }
+    }
 }

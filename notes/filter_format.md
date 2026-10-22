@@ -65,3 +65,20 @@ Sine-sweep responses vs a flat Swept-EQ reference, Quantum 19/20 capture:
   roughly constant across the range; peak frequency within ~8 % of the display mid-range,
   ~25 % high at the bottom.
 - Q0: 12/24/36 dB/oct with a +2…+5 dB bump at the lowest cutoffs (4/6-pole strongest).
+
+## Measured stage law (2026-10-20, stage-probe firmware, recordings/stage_probe, tools/stage_law_fit.py)
+Single stage words on the E4 (all other words neutral), voice 0 of preset 000 transposed −48..+24 (50 Hz..3.2 kHz).
+Fit over 73 words: **1.9 dB RMS** with an absolute-damping state-variable law (the pole-radius model above is wrong):
+- pole stage  H = w0² / (s² + b s + w0²)   (lowpass, unity gain at low frequencies)
+- zero stage  H = (s² + b s + w0²) / wn²,  wn = 2π·8060 Hz
+- F → w0: f0 = 1398.5 Hz · 2^((F − 0x80) / 31.42)  (31.4 steps/octave). F ≥ ~0xE0 leaves the law (wraps).
+- X → b (absolute damping): 0x60 21 Hz, 0x80 61, 0xA0 233, 0xC0 1015, 0xE0 4053, 0xF0 6209, 0xFF 8104 Hz
+  (≈ one octave per 16 X steps, saturating at the top). Q = w0 / b, so constant Q needs X ≈ F/2 + c (as the
+  stock constant-Q filters do).
+- Consequences: X = 0xFF is **not** neutral; 0xFFCF is neutral because its corner lies above the audio band
+  (pole) / its gain is ≈ 1 (zero: (f0(0xCF)/8060)² ≈ 0.99). A zero stage with F = 0xE0 is a broadband +6.3 dB
+  gain (the maximum: F above wraps). Poles and zeros with the same word do not cancel.
+- Stage order (words 0, 4, 8) makes no difference for a single stage (linear).
+- Headroom: a resonant pole tuned to the tone (F 0x67, X 0xC0 → 0x60, model gain −2 → +31 dB) raised the
+  output from −58 to −33 dBFS rms (−24.5 dBFS peak) with THD −51 → −75 dB: no clipping up to there.
+- The gain byte (word 9 halves) attenuates: 0xFE → 0xF0 −2.2 dB, 0xE0 −5.8, 0xD0 −11.9 (one measurement).

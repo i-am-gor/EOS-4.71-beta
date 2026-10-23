@@ -67,6 +67,8 @@ PAN_FIX = ((-322, -311), (-316, -316))   # stock -> equal, so centre (index 64 r
 HPG_CF, HPG_CF_STOCK = 0x667CE, '203910004d7c21400024'   # HP/BP common_cf: word 9 = base gain
 HPG_PQ, HPG_PQ_STOCK = 0x6680C, '0281000000ff'           # HP/BP common_pq: andi.l #0xFF,d1
 HPG_K = {0x660E0: 32, 0x66A40: 48, 0x66A8C: 16}          # descriptor byte 15 (HP2, HP4, Contrary BP): word-9 cut K (HP4 48 after re-measure)
+KPM_REC, KPM_STOCK, KPM_NEW = 0x14355C + 0x7B * 0x1C + 10, '000000032d', '0000000100'   # keypad '-' Num Lock layer:
+#   PC-AT key table, scan code 0x7B record 1: type 3 (char '-') -> type 1 value 0 (one step down), as with Num Lock off
 SCN_NAME = 0x2012E                        # destination 58's name (lfosync.s name_scn): 'SLpScn' -> 'WTScan'
 BM_KEYS, BM_SLOT = 0xB71E2, 0xB71F2      # Beat Munger soft keys {name, handler}; 0xB71F2 is the empty one
 NOP_SUBQ = bytes.fromhex('598f4e714e71')
@@ -142,6 +144,8 @@ def build(base, out, probe=False, slew=True):
     for a in HPG_K:
         if img[a + 12 - BASE] != 0 or img[a + 15 - BASE] != 0:
             raise SystemExit(f'HP/BP descriptor {a:#x} retshift/byte 15 not 0')
+    if img[KPM_REC - BASE:KPM_REC - BASE + 5].hex() != KPM_STOCK:
+        raise SystemExit('keypad - key-table record not stock')
     if img[SCN_NAME - BASE:SCN_NAME - BASE + 7] != b'SLpScn\0':
         raise SystemExit('destination 58 name not SLpScn')
     if img[BM_SLOT - BASE:BM_SLOT - BASE + 8] != bytes(8) or u32(img, BM_SLOT + 12) != 0xB60D8:
@@ -231,6 +235,7 @@ def build(base, out, probe=False, slew=True):
         raise SystemExit('pm_A not at the stock entry')
     struct.pack_into('>I', img, PM_PB - BASE, syms['pm_B'])
     img[SCN_NAME - BASE:SCN_NAME - BASE + 7] = b'WTScan\0'
+    img[KPM_REC - BASE:KPM_REC - BASE + 5] = bytes.fromhex(KPM_NEW)
     struct.pack_into('>hh', img, PAN_TAB + 126 - BASE, *PAN_FIX[1])
     img[HPG_CF - BASE:HPG_CF - BASE + 10] = bytes.fromhex('4eb9') + struct.pack('>I', syms['hg_cf']) + bytes.fromhex('4e714e71')
     img[HPG_PQ - BASE:HPG_PQ - BASE + 6] = bytes.fromhex('4eb9') + struct.pack('>I', syms['hg_pq'])

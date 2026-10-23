@@ -9,8 +9,8 @@ running when your sequencer stops, and a fix for the pan controls.
 Sample Edit, the **'Slice** cord destination, a **Slice** key in Beat Munger that turns a loop into a sliced
 preset, **WTScan** improvements (notes start at the loop, fast moves glide), and a balanced pan centre.
 
-**New in build 2:** high-pass filters no longer run into clipping at high Q, and the 4 Pole LP+Fuzz level
-follows Q smoothly. The startup screen shows **EOS 4.71-beta2 build 2**.
+**New in build 2:** high-pass filters no longer run into clipping at high Q, the 4 Pole LP+Fuzz level
+follows Q smoothly, and keypad − on a PC keyboard always steps the value down. The startup screen shows **EOS 4.71-beta2 build 2**.
 
 Read this addendum together with the EOS 4.7 Operation Manual and the EOS 4.7 Operation Manual Addendum.
 Everything not mentioned here works as described there.
@@ -421,6 +421,23 @@ If Beat Munger is still playing when you press Slice, slicing starts when playba
 | Editing slices | Each slice is its own sample | Edit the one sample |
 
 Use **Beat Munger Slice** for real drum loops with uneven hits, and the **'Slice** cord for loops cut into equal steps.
+
+---
+
+## PC Keyboard: Keypad Minus (changed in build 2)
+
+With a PC-AT keyboard connected (the startup screen shows **PC-AT Keyboard Enabled**), the numeric keypad's
+**+** and **−** keys step the selected value up and down one step, like a click of the data wheel.
+
+| Key | EOS 4.70 to 4.71-beta2 build 1 | Build 2 |
+|---|---|---|
+| Keypad −, Num Lock off | one step down | one step down |
+| Keypad −, Num Lock on | types "-" | **one step down** |
+| Keypad +, Num Lock off | one step up | one step up |
+| Keypad +, Num Lock on | nothing | nothing |
+| Main-row - key | types "-" (Shift: "_") | types "-" (Shift: "_") |
+
+To type a "-" in a name, use the main-row - key.
 
 ---
 

@@ -35,8 +35,10 @@
 page (`0xBB62C`), which would show a **SetKybd** soft key instead of **SetBCh** if it returned 1. The other callers are
 `0x2733A`, `0x2E654` and `0xAA7A2`.
 
-**Changed in 4.71-beta2 build 2:** keypad − (0x7B) record 1 (Num Lock layer) is type 1 value 0, a step down,
-instead of the character '-' (`build_beta2.py` KPM_*, `tools/emu_kpminus.py`). The map below is stock 4.70.
+**Keypad + / − with Num Lock on (decided 2026-10-23):** kept as stock. With Num Lock on, keypad − types '-' and
+keypad + does nothing; with Num Lock off they step the value down / up. A build that made − (and then +) step with
+Num Lock on was published briefly as build 2 (`088695df`) and then withdrawn; build 2 is back to `0886960e`.
+The keypad table records are 0x7B / 0x79 record 1 (`KEY_TAB + code * 0x1C + 10`, key table at `0x14355C`).
 
 ## Key map (scan code, key, handler, plain | Shift | Ctrl | Alt)
 

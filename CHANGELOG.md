@@ -2,9 +2,8 @@
 
 ## EOS 4.71-beta2 build 2
 
-Header name **EOS 4.71-beta2 build 2**, image checksum `088695df`. Includes everything in EOS 4.71-beta2 (build 1,
-`0886a24c`); only the filter levels and the keypad minus key below change. Apps v0.2.2 build it by default.
-The first upload of build 2 (`0886960e`, apps v0.2.1, without the keypad fix) has been replaced. Checked in the emulator
+Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (build 1,
+`0886a24c`); only the filter levels below change. Apps v0.2.1 build it by default. Checked in the emulator
 (`tools/emu_filterfix.py`: every Q, note-on and real-time, with Master Headroom 0 and 15) and measured on an E4
 Ultra with the sine-sweep grid (`notes/filter_survey_beta2.md`).
 
@@ -36,14 +35,6 @@ Ultra with the sine-sweep grid (`notes/filter_survey_beta2.md`).
   used a smooth curve. Between Q 104 and Q 112 this left a 0.7–2 dB dip at cutoffs 176–240.
 - **Fix:** note-on now uses the same smooth curve. The dip is gone. Q 32 and Q 96–104 sit 1–1.5 dB lower at
   note-on than before, matching what a real-time Q move already gave. The fuzz itself is unchanged.
-### Fixed: keypad minus on a PC keyboard typed "-" with Num Lock on
-- With a PC-AT keyboard connected, keypad **−** steps the selected value down one step and keypad **+** steps it up.
-  With Num Lock on, keypad − typed a "-" character instead.
-- Keypad − now steps down one step with Num Lock on as well. Everything else is unchanged: keypad + still does
-  nothing with Num Lock on, and the main-row **-** key still types "-" (Shift: "_").
-- One record of EOS's key table changes (scan code 0x7B, Num Lock layer). Checked in the emulator by running EOS's
-  own keypad routine for every keypad key with every Shift / Ctrl / Alt / Caps Lock / Num Lock combination
-  (`tools/emu_kpminus.py`: 1,344 checks, only the 8 keypad − Num Lock cases change). Not yet tested on hardware.
 
 ## EOS 4.71-beta2
 

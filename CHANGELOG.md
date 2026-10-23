@@ -1,9 +1,14 @@
 # Changelog: EOS 4.70 → EOS 4.71-beta
 
-## EOS 4.71-beta2 build 2
+## Unreleased: EOS 4.71-beta2 build 2 (withdrawn)
 
-Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (build 1,
-`0886a24c`); only the filter levels below change. Apps v0.2.1 build it by default. Checked in the emulator
+**Not available.** Build 2 was published on GitHub on 2026-10-23 and withdrawn the same day; its release and tag have
+been deleted. The current release is **EOS 4.71-beta2** below, and the EOS Flasher apps build that. The changes
+below stay in the source (`tools/build_beta2.py`) for a later release.
+
+Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (`0886a24c`);
+only the filter levels below change. The PC-keyboard keypad is as in EOS 4.70 (with Num Lock off, keypad − steps
+the value down and keypad + steps it up). Checked in the emulator
 (`tools/emu_filterfix.py`: every Q, note-on and real-time, with Master Headroom 0 and 15) and measured on an E4
 Ultra with the sine-sweep grid (`notes/filter_survey_beta2.md`).
 

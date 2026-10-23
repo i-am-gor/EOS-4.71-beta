@@ -1,4 +1,4 @@
-# EOS 4.71-beta2 build 2 for the E-mu E4 Ultra
+# EOS 4.71-beta2 +LfoCk for the E-mu E4 Ultra
 
 An unofficial update of E-mu's **EOS 4.70** for the Emulator IV family **Ultra** models, made by reverse
 engineering the 4.70 firmware and testing every change in an emulator and on a real E4 Ultra.
@@ -6,6 +6,10 @@ engineering the 4.70 firmware and testing every change in an emulator and on a r
 **What's new** (details in [CHANGELOG.md](CHANGELOG.md) and the
 [EOS 4.71-beta2 Operation Manual Addendum](docs/EOS-4.71-beta-Addendum.md),
 [PDF](docs/EOS-4.71-beta-Addendum.pdf)):
+
+**New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects the LFO's tempo
+division (4 bars … 1/32) and overrides Rate. Zero or positive leaves Rate alone. The startup screen shows
+**EOS 4.71-beta2 +LfoCk**.
 
 **New in 4.71-beta2:**
 
@@ -89,10 +93,10 @@ flatpak run io.github.rfidmusic.EOSFlasher
 ### Flash EOS 4.71-beta2
 
 1. Connect a MIDI interface **both ways** to the E4 (the loader acknowledges every packet).
-2. Start **EOS Flasher**, choose your **EOS470.EXE**, select **EOS 4.71-beta2 build 2**, press **Build**.
+2. Start **EOS Flasher**, choose your **EOS470.EXE**, select **EOS 4.71-beta2 +LfoCk**, press **Build**.
 3. Select the MIDI output and input, press **Send to E4**.
 4. Power on the E4 holding **Enter**, answer **Yes** to "Download OS from MIDI?".
-5. After about 9 minutes answer **Yes** to "Burn to flash?". The startup screen shows **EOS 4.71-beta2 build 2**.
+5. After about 9 minutes answer **Yes** to "Burn to flash?". The startup screen shows **EOS 4.71-beta2 +LfoCk**.
 
 To go back, do the same with **Original EOS 4.70**.
 
@@ -113,7 +117,7 @@ To go back, do the same with **Original EOS 4.70**.
 | Path | Contents |
 |---|---|
 | `apps/` | Rust apps: `eos-flasher`, `eos-pantest`, shared `eos-core` (codec, patch, MIDI File Dump, editor SysEx) |
-| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 patch: only the 7,165 bytes this project wrote, applied to your own 4.70 |
+| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 patch: only the 7,186 bytes this project wrote, applied to your own 4.70 |
 | `apps/eos-core/data/eos471beta.e4p` | The 4.71-beta patch (3,232 bytes) |
 | `patches/` | Assembler sources (ColdFire) of every change |
 | `tools/` | Python builders, emulator test suites, hardware test scripts, MIDI File Dump tool |

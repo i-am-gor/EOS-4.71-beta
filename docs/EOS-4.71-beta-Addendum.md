@@ -10,7 +10,11 @@ Sample Edit, the **'Slice** cord destination, a **Slice** key in Beat Munger tha
 preset, **WTScan** improvements (notes start at the loop, fast moves glide), and a balanced pan centre.
 
 **New in build 2:** high-pass filters no longer run into clipping at high Q, and the 4 Pole LP+Fuzz level
-follows Q smoothly. The startup screen shows **EOS 4.71-beta2 build 2**.
+follows Q smoothly.
+
+**New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects that LFO's tempo
+division (4 bars through 1/32) and overrides Rate. An amount of zero or above leaves Rate alone. The
+startup screen shows **EOS 4.71-beta2 +LfoCk**.
 
 Read this addendum together with the EOS 4.7 Operation Manual and the EOS 4.7 Operation Manual Addendum.
 Everything not mentioned here works as described there.
@@ -186,6 +190,52 @@ MIDI clock.
 - Over MIDI SysEx the divisions are Rate values 128–143.
 
 **New LFO shape:** **saw down** (shape 16), a falling sawtooth. The existing **sawtooth** rises.
+
+## LFO Clock from a Cord (Lfo1Ck and Lfo2Ck)
+
+**Lfo1Ck** and **Lfo2Ck** choose an LFO's tempo division from a cord. The divisions are the same
+sixteen lengths as a synced Rate, from 4 bars to 1/32. **Lfo1Ck** controls LFO 1 and **Lfo2Ck**
+controls LFO 2.
+
+**To control an LFO from a cord:**
+
+1. Edit the voice and go to the **Cords** page.
+2. Choose a source, set the destination to **Lfo1Ck** or **Lfo2Ck**, and set the amount negative.
+   An amount of **0** or above leaves that LFO's Rate in control, including a tempo-synced Rate.
+3. Play a note and move the source.
+
+At amount **−100**, a MIDI controller (the mod wheel, or a MIDI A–H source) selects the division
+below. Several cords to the same destination add. A smaller negative amount reaches only the slower
+divisions.
+
+| Controller value | Division |
+|---|---|
+| 0 | Rate unchanged |
+| 1–7 | 4bars |
+| 8–15 | 2bars |
+| 16–23 | 1bar |
+| 24–31 | 1/2. |
+| 32–39 | 1/2 |
+| 40–47 | 1/4. |
+| 48–55 | 1/2T |
+| 56–63 | 1/4 |
+| 64–71 | 1/8. |
+| 72–79 | 1/4T |
+| 80–87 | 1/8 |
+| 88–95 | 1/16. |
+| 96–103 | 1/8T |
+| 104–111 | 1/16 |
+| 112–119 | 1/16T |
+| 120–127 | 1/32 |
+
+**Notes**
+
+- While the cord is negative, that LFO restarts at the beginning of its cycle on each new note. The
+  LFO **Sync** switch is not used. **Shape** and **Delay** still work.
+- While the cord is negative, the Rate cord (Lfo1Rt / Lfo2Rt), **Variation** and the LFO trigger are
+  ignored, as they are when Rate itself is synced.
+- The division follows the master clock, internal or external, the same way a synced Rate does.
+- In the destination list, **Lfo1Ck** follows Lfo1Trg. **Lfo2Ck** follows Lag0in.
 
 ---
 

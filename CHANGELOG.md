@@ -1,5 +1,19 @@
 # Changelog: EOS 4.70 → EOS 4.71-beta
 
+## EOS 4.71-beta2 +LfoCk
+
+Header name **EOS 4.71-beta2 +LfoCk**, image checksum `08868e96`. Includes everything in EOS 4.71-beta2
+build 2 (`0886960e`).
+
+### New: Lfo1Ck and Lfo2Ck cord destinations
+- A negative cord sum selects one of the 16 tempo divisions (4 bars through 1/32) and overrides Rate.
+  Full scale, a controller at CC 127 through panel amount −100, is 1/32. Smaller amounts are slower, in
+  16 even steps. Zero or a positive sum leaves Rate alone, including a synced Rate.
+- While the sum is negative the LFO restarts on each note. Shape and Delay still work. The Rate cord,
+  Variation and the LFO trigger are ignored, as they are for a synced Rate.
+- Lfo1Ck follows Lfo1Trg in the destination list. Lfo2Ck follows Lag0in. Lag0in is unchanged.
+- Checked in the emulator (`tools/emu_lfock.py`) and on an E4 Ultra.
+
 ## EOS 4.71-beta2 build 2
 
 Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (build 1,

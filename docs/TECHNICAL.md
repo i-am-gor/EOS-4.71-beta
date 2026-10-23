@@ -17,7 +17,7 @@ Not in the public repository (E-mu material or local data): `bin/`, `build/`, `g
 - `tools/eos_filter.py` – voice-filter coefficient model + response plots (`notes/filter_format.md`)
 - `notes/*.md` – design notes, measurements and findings for every change
 - `patches/*/` – assembler sources of all patches; `tools/build_*.py` – builders; `tools/emu_*.py` – emulator tests
-- `.venv` – Python env (numpy, matplotlib, capstone, unicorn): `python3 -m venv .venv && .venv/bin/pip install numpy matplotlib capstone unicorn`
+- `.venv` – Python env (numpy, matplotlib, capstone, unicorn; mido + python-rtmidi for `eos_midi.py ports/send`): `python3 -m venv .venv && .venv/bin/pip install numpy matplotlib capstone unicorn mido python-rtmidi`
 - `tools/ghidra_headless.sh` – analyzeHeadless with Homebrew JDK 21
 
 ## Floppy / flash image format

@@ -13,8 +13,8 @@ preset, **WTScan** improvements (notes start at the loop, fast moves glide), and
 follows Q smoothly.
 
 **New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects that LFO's tempo
-division (4 bars through 1/32) and overrides Rate. An amount of zero or above leaves Rate alone. The
-startup screen shows **EOS 4.71-beta2 +LfoCk**.
+division (4 bars through 1/32) and overrides Rate. An amount of zero or above leaves Rate alone. In the
+cord list, Lfo2Ck follows Lfo2Trg. The startup screen shows **EOS 4.71-beta2 +LfoCk**.
 
 Read this addendum together with the EOS 4.7 Operation Manual and the EOS 4.7 Operation Manual Addendum.
 Everything not mentioned here works as described there.
@@ -235,7 +235,8 @@ divisions.
 - While the cord is negative, the Rate cord (Lfo1Rt / Lfo2Rt), **Variation** and the LFO trigger are
   ignored, as they are when Rate itself is synced.
 - The division follows the master clock, internal or external, the same way a synced Rate does.
-- In the destination list, **Lfo1Ck** follows Lfo1Trg. **Lfo2Ck** follows Lag0in.
+- In the destination list, **Lfo1Ck** follows Lfo1Trg. **Lfo2Ck** follows Lfo2Trg, and **Lag0in**
+  follows Lfo2Ck. A preset stores the destination number, which is unchanged.
 
 ---
 

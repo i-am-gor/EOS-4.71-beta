@@ -25,8 +25,9 @@ destination 58 renamed SLpScn -> WTScan (same length, in place);
 HP2/HP4/Contrary BP word 9 lowered with Q (patches/hpgain/hpgain.s, K in descriptor byte 15);
 pan table 0x61590 entries 63/64 -322/-311 -> -316/-316: centre pan balanced (was 1 step = ~0.24 dB right-heavy).
 LFO tick hook 0x61BF4 jmp cord_tick (patches/lfock/lfock.s, notes/lfock.md): destinations Lfo1Ck (98) and
-Lfo2Ck (107) override Rate with the 16 tempo divisions while their cord sum is negative. --nocord builds
-EOS 4.71-beta2 build 2 without that patch.
+Lfo2Ck (107) override Rate with the 16 tempo divisions while their cord sum is negative. The cord
+destination list visits 107 before 106 so Lfo2Ck is grouped with LFO 2; Lag0in stays id 106
+(patches/lfock/list_order.s). --nocord builds EOS 4.71-beta2 build 2 without either patch.
 """
 import json, os, struct, subprocess, sys, tempfile, zlib
 
@@ -76,6 +77,8 @@ SCN_NAME = 0x2012E                        # destination 58's name (lfosync.s nam
 LFO_HOOK, LFO_HOOK_STOCK = 0x61BF4, bytes.fromhex('4ef900020400')   # jmp lfo_tick (0x20400)
 LFOCK_NAME_AT = 0x201AE               # 18 bytes free before 0x201C0; Lfo1Ck / Lfo2Ck names
 LFOCK_DESTS = ((98, 0x1A4, b'Lfo1Ck'), (107, 0x1A6, b'Lfo2Ck'))
+LORD_HEAD = bytes.fromhex('4feffff0')   # lea -16(sp), sp at each list walker
+LORD_FUNCS = ((0x62D00, 'ord_d1'), (0x62D60, 'ord_stk'), (0x62C98, 'ord_rev'))
 BM_KEYS, BM_SLOT = 0xB71E2, 0xB71F2      # Beat Munger soft keys {name, handler}; 0xB71F2 is the empty one
 NOP_SUBQ = bytes.fromhex('598f4e714e71')
 
@@ -168,7 +171,8 @@ def build(base, out, probe=False, slew=True, cord=True):
     asm(HPG, 'hpgain.s', 'hpgain.o')
     if cord:
         asm(LFK, 'lfock.s', 'lfock.o')
-    so, lo_, po, pm, sr, hg, lk = 'silence.o', 'slice.o', 'probe.o', 'portmap.o', 'slicer.o', 'hpgain.o', 'lfock.o'   # linked from a temp dir (the script cannot quote paths)
+        asm(LFK, 'list_order.s', 'list_order.o')
+    so, lo_, po, pm, sr, hg, lk, od = 'silence.o', 'slice.o', 'probe.o', 'portmap.o', 'slicer.o', 'hpgain.o', 'lfock.o', 'list_order.o'   # linked from a temp dir (the script cannot quote paths)
     if probe:
         place = [('.blkA', A, [(lo_, '.slA')]), ('.blkB', B_, [(lo_, '.slB')]), ('.blkF', F, [(lo_, '.slF'), (lo_, '.slT'), (lo_, '.slS')]),
                  ('.blkV48', V48, [(po, '.prb'), (lo_, '.slP')]), ('.blkU', U48, [(po, '.prbio')])]
@@ -179,7 +183,7 @@ def build(base, out, probe=False, slew=True, cord=True):
                  ('.blkV16', V16, [(so, '.silx3')])]
     pm_parts = [(pm, '.pm')] + ([] if probe else [(sr, '.slcx')]) + [(hg, '.hpg')]
     if cord:
-        pm_parts.append((lk, '.lfk'))
+        pm_parts += [(lk, '.lfk'), (od, '.ord')]
     place.append(('.blkPM', PM, pm_parts))
     ld = 'SECTIONS {\n' + ''.join(
         f'  {n} 0x{r[0]:X} : {{ ' + ' '.join(f'{o}({s})' for o, s in parts) +
@@ -194,9 +198,10 @@ def build(base, out, probe=False, slew=True, cord=True):
         shutil.copy(os.path.join(HPG, 'hpgain.o'), td)
         if cord:
             shutil.copy(os.path.join(LFK, 'lfock.o'), td)
+            shutil.copy(os.path.join(LFK, 'list_order.o'), td)
         open(os.path.join(td, 'beta2.ld'), 'w').write(ld)
         elf = os.path.join(td, 'beta2.elf')
-        link_objs = [so, lo_, pm, hg] + ([po] if probe else [sr]) + ([lk] if cord else [])
+        link_objs = [so, lo_, pm, hg] + ([po] if probe else [sr]) + ([lk, od] if cord else [])
         subprocess.run([BIN + 'm68k-elf-ld', '-T', 'beta2.ld', '-o', 'beta2.elf'] + link_objs,
                        check=True, cwd=td)
         syms = {}
@@ -270,7 +275,11 @@ def build(base, out, probe=False, slew=True, cord=True):
         for code, voff, name in LFOCK_DESTS:
             ptr = LFOCK_NAME_AT + names.find(name + b'\0')
             struct.pack_into('>IHH', img, DEST_TABLE + 8 * code - BASE, ptr, voff, 0x200)
-        print(f'lfock: cord_tick at {syms["cord_tick"]:#x}')
+        for addr, name in LORD_FUNCS:
+            if img[addr - BASE:addr - BASE + 4] != LORD_HEAD:
+                raise SystemExit(f'{addr:#x} is not the stock list walker')
+            img[addr - BASE:addr - BASE + 6] = b'\x4e\xf9' + struct.pack('>I', syms[name])
+        print(f'lfock: cord_tick at {syms["cord_tick"]:#x}; list order at {syms["ord_d1"]:#x}')
     header = b'EOS 4.71-b2 SliceProbe' if probe else (NAME if cord else BUILD2_NAME)
     img[0x18:0x30] = header.ljust(24, b' ')
     struct.pack_into('>II', img, 4, 0, 0xffffffff)

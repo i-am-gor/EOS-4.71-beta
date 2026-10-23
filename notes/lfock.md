@@ -2,7 +2,7 @@
 
 Build: `tools/build_beta2.py BASE.bin OUT.bin` (header "EOS 4.71-beta2 +LfoCk").
 `tools/build_beta2.py --nocord` is EOS 4.71-beta2 build 2 without this patch.
-Test: `tools/emu_lfock.py BASE.bin`.
+Test: `tools/emu_lfock.py BASE.bin`, `tools/emu_listorder.py BASE.bin`.
 
 ## What it does
 
@@ -18,8 +18,9 @@ While the sum is negative the LFO restarts on each note (the Sync switch is not 
 Delay still work. The Rate cord, Variation and the LFO trigger are ignored, as they are for a synced
 Rate. LFO 1 and LFO 2 are independent. Two cords into the same destination add.
 
-Lfo1Ck is destination 98, listed after Lfo1Trg. Lfo2Ck is destination 107, listed after Lag0in.
-Lag0in stays destination 106.
+Lfo1Ck is destination 98, listed after Lfo1Trg. Lfo2Ck is destination 107. In the list it is
+shown after Lfo2Trg and before Lag0in, so the LFO 2 destinations sit together. Lag0in stays
+destination 106. Presets store the id, not the list position.
 
 ## How
 
@@ -36,3 +37,17 @@ Lag0in stays destination 106.
   after its own entry, so the prologue saves d2–d3 itself (`lea -8(sp)` / `movem`; 5206e `movem` has
   no predecrement) and restores them before the jump. `divu.l` into d0 encodes a remainder divide on
   the 5206e; the quotient is taken in d3. `move.w` into a data register does not sign-extend.
+
+## List order
+
+The cord screen skips entries whose voice offset is `0x1E` and shows the rest in id order.
+Id 106 was already `Lag0in`, so `Lfo2Ck` (107) would have been listed after it. The list
+walkers are retargeted (`patches/lfock/list_order.s`):
+
+- `0x62D00` (display index in d1) and `0x62D60` (display index on the stack) return the id.
+  Visit position 106 yields id 107, and position 107 yields id 106.
+- `0x62C98` (stored id → display index) counts a limit of 106 as 107 and a limit of 107 as 106,
+  then joins the stock loop at `0x62CA4`.
+
+`0x62D00` and `0x62D60` agree on every index, and each id round-trips through `0x62C98`.
+Test: `tools/emu_listorder.py`.

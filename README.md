@@ -8,8 +8,8 @@ engineering the 4.70 firmware and testing every change in an emulator and on a r
 [PDF](docs/EOS-4.71-beta-Addendum.pdf)):
 
 **New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects the LFO's tempo
-division (4 bars … 1/32) and overrides Rate. Zero or positive leaves Rate alone. The startup screen shows
-**EOS 4.71-beta2 +LfoCk**.
+division (4 bars … 1/32) and overrides Rate. Zero or positive leaves Rate alone. In the cord list,
+Lfo2Ck is grouped with the other LFO 2 destinations. The startup screen shows **EOS 4.71-beta2 +LfoCk**.
 
 **New in 4.71-beta2:**
 
@@ -117,7 +117,7 @@ To go back, do the same with **Original EOS 4.70**.
 | Path | Contents |
 |---|---|
 | `apps/` | Rust apps: `eos-flasher`, `eos-pantest`, shared `eos-core` (codec, patch, MIDI File Dump, editor SysEx) |
-| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 patch: only the 7,186 bytes this project wrote, applied to your own 4.70 |
+| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 patch: only the 7,199 bytes this project wrote, applied to your own 4.70 |
 | `apps/eos-core/data/eos471beta.e4p` | The 4.71-beta patch (3,232 bytes) |
 | `patches/` | Assembler sources (ColdFire) of every change |
 | `tools/` | Python builders, emulator test suites, hardware test scripts, MIDI File Dump tool |

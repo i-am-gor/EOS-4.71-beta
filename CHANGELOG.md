@@ -2,7 +2,7 @@
 
 ## EOS 4.71-beta2 +LfoCk
 
-Header name **EOS 4.71-beta2 +LfoCk**, image checksum `08868e96`. Includes everything in EOS 4.71-beta2
+Header name **EOS 4.71-beta2 +LfoCk**, image checksum `08868074`. Includes everything in EOS 4.71-beta2
 build 2 (`0886960e`).
 
 ### New: Lfo1Ck and Lfo2Ck cord destinations
@@ -11,8 +11,9 @@ build 2 (`0886960e`).
   16 even steps. Zero or a positive sum leaves Rate alone, including a synced Rate.
 - While the sum is negative the LFO restarts on each note. Shape and Delay still work. The Rate cord,
   Variation and the LFO trigger are ignored, as they are for a synced Rate.
-- Lfo1Ck follows Lfo1Trg in the destination list. Lfo2Ck follows Lag0in. Lag0in is unchanged.
-- Checked in the emulator (`tools/emu_lfock.py`) and on an E4 Ultra.
+- Lfo1Ck follows Lfo1Trg in the destination list. Lfo2Ck follows Lfo2Trg, and Lag0in follows
+  Lfo2Ck. The stored numbers are unchanged: Lag0in is 106, Lfo2Ck is 107.
+- Checked in the emulator (`tools/emu_lfock.py`, `tools/emu_listorder.py`) and on an E4 Ultra.
 
 ## EOS 4.71-beta2 build 2
 

@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 /// EOS 4.71-beta (beta1).
 pub const BETA1: &[u8] = include_bytes!("../data/eos471beta.e4p");
-/// EOS 4.71-beta2.
+/// EOS 4.71-beta2 build 2.
 pub const BETA2: &[u8] = include_bytes!("../data/eos471beta2.e4p");
 
 /// Which OS to build from the user's EOS 4.70.
@@ -115,7 +115,7 @@ mod tests {
         assert_eq!(a.stock_sha, b.stock_sha, "both patches apply to the same EOS 4.70");
         assert_eq!(a.len, b.len);
         assert_eq!(a.name, "EOS 4.71-beta");
-        assert_eq!(b.name, "EOS 4.71-beta2");
+        assert_eq!(b.name, "EOS 4.71-beta2 build 2");
         for p in [&a, &b] {
             let mut last = 0;
             for (off, d) in &p.ranges {

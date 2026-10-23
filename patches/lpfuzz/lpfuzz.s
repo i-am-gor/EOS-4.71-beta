@@ -255,7 +255,12 @@ lpf_cf: move.l  20(%sp),-(%sp)               | struct
         move.l  20(%sp),-(%sp)               | this
         jsr     LP4_CF
         lea     20(%sp),%sp
-        move.l  %d0,-(%sp)                   | LP4 return (level compensation)
+        move.l  16(%sp),%d0                  | level compensation: the LP4 packQ law at q/2, (q/2 * -20) >> 7,
+        lsr.l   #1,%d0                       | instead of LP4 computeFrames' stepped table (RGAIN[(q/2) >> 3]),
+        moveq   #-20,%d1                     | which jumped 2 dB at Q 112 and disagreed with packQ by 1-2 dB
+        muls.l  %d1,%d0
+        asr.l   #7,%d0
+        move.l  %d0,-(%sp)
         movea.l 12(%sp),%a0                  | blk
         move.l  20(%sp),%d1                  | q
         bsr     fuzz

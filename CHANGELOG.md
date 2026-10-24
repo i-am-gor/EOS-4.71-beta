@@ -1,9 +1,29 @@
 # Changelog: EOS 4.70 → EOS 4.71-beta
 
-## EOS 4.71-beta2 build 2
+## EOS 4.71-beta2 +LfoCk
 
-Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (build 1,
-`0886a24c`); only the filter levels below change. Apps v0.2.1 build it by default. Checked in the emulator
+Header name **EOS 4.71-beta2 +LfoCk**, image checksum `08868db3`. Includes the released EOS 4.71-beta2 (`0886a24c`) and not the
+withdrawn build 2 filter changes. `tools/build_beta2.py --nocord` rebuilds the release.
+
+### New: Lfo1Ck and Lfo2Ck cord destinations
+- A negative cord sum selects one of the 16 tempo divisions (4 bars through 1/32) and overrides Rate.
+  Full scale, a controller at CC 127 through panel amount −100, is 1/32. Smaller amounts are slower, in
+  16 even steps. Zero or a positive sum leaves Rate alone, including a synced Rate.
+- While the sum is negative the LFO restarts on each note. Shape and Delay still work. The Rate cord,
+  Variation and the LFO trigger are ignored, as they are for a synced Rate.
+- Lfo1Ck follows Lfo1Trg in the destination list. Lfo2Ck follows Lfo2Trg, and Lag0in follows
+  Lfo2Ck. The stored numbers are unchanged: Lag0in is 106, Lfo2Ck is 107.
+- Checked in the emulator (`tools/emu_lfock.py`, `tools/emu_listorder.py`).
+
+## Unreleased: EOS 4.71-beta2 build 2 (withdrawn)
+
+**Not available.** Build 2 was published on GitHub on 2026-10-23 and withdrawn the same day; its release and tag have
+been deleted. The released image is **EOS 4.71-beta2** below. This branch does not apply the filter changes; they are
+not in `tools/build_beta2.py` here. **EOS 4.71-beta2 +LfoCk** above is the release plus the cord destinations.
+
+Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (`0886a24c`);
+only the filter levels below change. The PC-keyboard keypad is as in EOS 4.70 (with Num Lock off, keypad − steps
+the value down and keypad + steps it up). Checked in the emulator
 (`tools/emu_filterfix.py`: every Q, note-on and real-time, with Master Headroom 0 and 15) and measured on an E4
 Ultra with the sine-sweep grid (`notes/filter_survey_beta2.md`).
 

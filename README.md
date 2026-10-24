@@ -1,4 +1,4 @@
-# EOS 4.71-beta2 build 2 for the E-mu E4 Ultra
+# EOS 4.71-beta2 +LfoCk for the E-mu E4 Ultra
 
 An unofficial update of E-mu's **EOS 4.70** for the Emulator IV family **Ultra** models, made by reverse
 engineering the 4.70 firmware and testing every change in an emulator and on a real E4 Ultra.
@@ -6,6 +6,12 @@ engineering the 4.70 firmware and testing every change in an emulator and on a r
 **What's new** (details in [CHANGELOG.md](CHANGELOG.md) and the
 [EOS 4.71-beta2 Operation Manual Addendum](docs/EOS-4.71-beta-Addendum.md),
 [PDF](docs/EOS-4.71-beta-Addendum.pdf)):
+
+**New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects the LFO's tempo
+division (4 bars … 1/32) and overrides Rate. Zero or positive leaves Rate alone. In the cord list,
+Lfo2Ck is grouped with the other LFO 2 destinations. The startup screen shows **EOS 4.71-beta2 +LfoCk**.
+This image is the released EOS 4.71-beta2 plus that cord. It does not include the withdrawn build 2
+filter changes.
 
 **New in 4.71-beta2:**
 
@@ -17,10 +23,6 @@ engineering the 4.70 firmware and testing every change in an emulator and on a r
 - **Insert Silence** in Sample Edit: 4 samples of silence, the lead-in loops and wavetables need.
 - **WTScan** (renamed from SLpScn): notes start at the loop, fast moves glide instead of bursting.
 - **Balanced pan centre** (4.70 and 4.71-beta were about 0.24 dB right-heavy).
-
-**New in build 2:** the 2nd and 4th Order High-pass turn their level down as Q rises (up to −5.9 / −11.8 dB at
-Q 127), so high-Q settings no longer run into the filter chip's clipping point, and the 4 Pole LP+Fuzz level follows
-Q smoothly. See the [CHANGELOG](CHANGELOG.md).
 
 **From 4.71-beta:**
 
@@ -40,7 +42,7 @@ Q smoothly. See the [CHANGELOG](CHANGELOG.md).
 
 ## Get it
 
-E-mu's firmware is not distributed here. The **EOS Flasher** app builds 4.71-beta2 (or the earlier 4.71-beta)
+E-mu's firmware is not distributed here. The **EOS Flasher** app builds 4.71-beta2 +LfoCk (or the earlier 4.71-beta)
 from your own copy of
 E-mu's update file **EOS470.EXE** (it verifies the file is the original 4.70, applies this project's
 patch and verifies the result) and sends it to the E4 over MIDI.
@@ -49,7 +51,7 @@ Downloads (see [Releases](../../releases)):
 
 | App | macOS 11+ (universal: Apple silicon + Intel) | macOS 10.13 High Sierra+ (Intel) | Windows | Linux (Flatpak, x86_64) |
 |---|---|---|---|---|
-| **EOS Flasher**: build 4.71-beta2 (or 4.71-beta, or the original 4.70) and flash it over MIDI | `EOS-Flasher-macOS-universal.zip` | `EOS-Flasher-macOS-HighSierra-Intel.zip` | `EOS-Flasher-Windows.zip` | `EOS-Flasher-Linux-x86_64.flatpak` |
+| **EOS Flasher**: build 4.71-beta2 +LfoCk (or 4.71-beta, or the original 4.70) and flash it over MIDI | `EOS-Flasher-macOS-universal.zip` | `EOS-Flasher-macOS-HighSierra-Intel.zip` | `EOS-Flasher-Windows.zip` | `EOS-Flasher-Linux-x86_64.flatpak` |
 | **EOS Pan Test**: measure the pan bug on your E4 and report results | `EOS-PanTest-macOS-universal.zip` | `EOS-PanTest-macOS-HighSierra-Intel.zip` | `EOS-PanTest-Windows.zip` | `EOS-PanTest-Linux-x86_64.flatpak` |
 
 The apps are not signed with an Apple or Microsoft developer certificate, so the first launch needs one extra
@@ -89,10 +91,10 @@ flatpak run io.github.rfidmusic.EOSFlasher
 ### Flash EOS 4.71-beta2
 
 1. Connect a MIDI interface **both ways** to the E4 (the loader acknowledges every packet).
-2. Start **EOS Flasher**, choose your **EOS470.EXE**, select **EOS 4.71-beta2 build 2**, press **Build**.
+2. Start **EOS Flasher**, choose your **EOS470.EXE**, select **EOS 4.71-beta2 +LfoCk**, press **Build**.
 3. Select the MIDI output and input, press **Send to E4**.
 4. Power on the E4 holding **Enter**, answer **Yes** to "Download OS from MIDI?".
-5. After about 9 minutes answer **Yes** to "Burn to flash?". The startup screen shows **EOS 4.71-beta2 build 2**.
+5. After about 9 minutes answer **Yes** to "Burn to flash?". The startup screen shows **EOS 4.71-beta2 +LfoCk**.
 
 To go back, do the same with **Original EOS 4.70**.
 
@@ -113,7 +115,7 @@ To go back, do the same with **Original EOS 4.70**.
 | Path | Contents |
 |---|---|
 | `apps/` | Rust apps: `eos-flasher`, `eos-pantest`, shared `eos-core` (codec, patch, MIDI File Dump, editor SysEx) |
-| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 patch: only the 7,165 bytes this project wrote, applied to your own 4.70 |
+| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 +LfoCk patch: only the 7,206 bytes this project wrote, applied to your own 4.70 |
 | `apps/eos-core/data/eos471beta.e4p` | The 4.71-beta patch (3,232 bytes) |
 | `patches/` | Assembler sources (ColdFire) of every change |
 | `tools/` | Python builders, emulator test suites, hardware test scripts, MIDI File Dump tool |

@@ -164,7 +164,7 @@ impl eframe::App for App {
         }
         let busy = self.running.is_some();
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("EOS Flasher — E-mu E4 Ultra, EOS 4.71-beta2 build 2");
+            ui.heading("EOS Flasher — E-mu E4 Ultra, EOS 4.71-beta2 +LfoCk");
             ui.label("Uses your own copy of E-mu's EOS470.EXE; no E-mu firmware is included in this app.");
             ui.separator();
 
@@ -185,7 +185,7 @@ impl eframe::App for App {
             ui.strong("2. Version");
             ui.horizontal(|ui| {
                 let before = self.version;
-                ui.radio_value(&mut self.version, Version::Beta2, "EOS 4.71-beta2 build 2 (latest)");
+                ui.radio_value(&mut self.version, Version::Beta2, "EOS 4.71-beta2 +LfoCk (latest)");
                 ui.radio_value(&mut self.version, Version::Beta1, "EOS 4.71-beta");
                 ui.radio_value(&mut self.version, Version::Original, "Original EOS 4.70 (go back)");
                 if before != self.version {

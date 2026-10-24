@@ -24,6 +24,10 @@ Tick loop-shift glide: 0x5FECA jsr shift_t, 0x5FED0..0x5FEED -> patches/slpscn/s
 destination 58 renamed SLpScn -> WTScan (same length, in place);
 HP2/HP4/Contrary BP word 9 lowered with Q (patches/hpgain/hpgain.s, K in descriptor byte 15);
 pan table 0x61590 entries 63/64 -322/-311 -> -316/-316: centre pan balanced (was 1 step = ~0.24 dB right-heavy).
+LFO tick hook 0x61BF4 jmp cord_tick (patches/lfock/lfock.s, notes/lfock.md): destinations Lfo1Ck (98) and
+Lfo2Ck (107) override Rate with the 16 tempo divisions while their cord sum is negative. The cord
+destination list visits 107 before 106 so Lfo2Ck is grouped with LFO 2; Lag0in stays id 106
+(patches/lfock/list_order.s). --nocord leaves both patches out (same header name).
 """
 import json, os, struct, subprocess, sys, tempfile, zlib
 
@@ -37,6 +41,7 @@ SIL, SLC = os.path.join(ROOT, 'patches', 'silence'), os.path.join(ROOT, 'patches
 PMD = os.path.join(ROOT, 'patches', 'portmap')
 SLR = os.path.join(ROOT, 'patches', 'slicer')
 HPG = os.path.join(ROOT, 'patches', 'hpgain')
+LFK = os.path.join(ROOT, 'patches', 'lfock')
 BIN = '/opt/homebrew/bin/'
 BASE = 0x20000
 NAME = b'EOS 4.71-beta2 build 2'
@@ -68,6 +73,11 @@ HPG_CF, HPG_CF_STOCK = 0x667CE, '203910004d7c21400024'   # HP/BP common_cf: word
 HPG_PQ, HPG_PQ_STOCK = 0x6680C, '0281000000ff'           # HP/BP common_pq: andi.l #0xFF,d1
 HPG_K = {0x660E0: 32, 0x66A40: 48, 0x66A8C: 16}          # descriptor byte 15 (HP2, HP4, Contrary BP): word-9 cut K (HP4 48 after re-measure)
 SCN_NAME = 0x2012E                        # destination 58's name (lfosync.s name_scn): 'SLpScn' -> 'WTScan'
+LFO_HOOK, LFO_HOOK_STOCK = 0x61BF4, bytes.fromhex('4ef900020400')   # jmp lfo_tick (0x20400)
+LFOCK_NAME_AT = 0x201AE               # 18 bytes free before 0x201C0; Lfo1Ck / Lfo2Ck names
+LFOCK_DESTS = ((98, 0x1A4, b'Lfo1Ck'), (107, 0x1A6, b'Lfo2Ck'))
+LORD_HEAD = bytes.fromhex('4feffff0')   # lea -16(sp), sp at each list walker
+LORD_FUNCS = ((0x62D00, 'ord_d1'), (0x62D60, 'ord_stk'), (0x62C98, 'ord_rev'))
 BM_KEYS, BM_SLOT = 0xB71E2, 0xB71F2      # Beat Munger soft keys {name, handler}; 0xB71F2 is the empty one
 NOP_SUBQ = bytes.fromhex('598f4e714e71')
 
@@ -107,7 +117,7 @@ def asm(d, src, obj):
     subprocess.run([BIN + 'm68k-elf-as', '-mcpu=5206e', '-o', obj, src], check=True, cwd=d)
 
 
-def build(base, out, probe=False, slew=True):
+def build(base, out, probe=False, slew=True, cord=True):
     with tempfile.TemporaryDirectory() as td:
         rel = os.path.join(td, 'rel.bin')
         syms_l = build_lpfuzz.build(base, rel, NAME, release=True)
@@ -158,7 +168,10 @@ def build(base, out, probe=False, slew=True):
     asm(PMD, 'portmap.s', 'portmap.o')
     asm(SLR, 'slicer.s', 'slicer.o')
     asm(HPG, 'hpgain.s', 'hpgain.o')
-    so, lo_, po, pm, sr, hg = 'silence.o', 'slice.o', 'probe.o', 'portmap.o', 'slicer.o', 'hpgain.o'   # linked from a temp dir (the script cannot quote paths)
+    if cord:
+        asm(LFK, 'lfock.s', 'lfock.o')
+        asm(LFK, 'list_order.s', 'list_order.o')
+    so, lo_, po, pm, sr, hg, lk, od = 'silence.o', 'slice.o', 'probe.o', 'portmap.o', 'slicer.o', 'hpgain.o', 'lfock.o', 'list_order.o'   # linked from a temp dir (the script cannot quote paths)
     if probe:
         place = [('.blkA', A, [(lo_, '.slA')]), ('.blkB', B_, [(lo_, '.slB')]), ('.blkF', F, [(lo_, '.slF'), (lo_, '.slT'), (lo_, '.slS')]),
                  ('.blkV48', V48, [(po, '.prb'), (lo_, '.slP')]), ('.blkU', U48, [(po, '.prbio')])]
@@ -167,9 +180,13 @@ def build(base, out, probe=False, slew=True):
                  ('.blkC', C, [(so, '.silstr')]), ('.blkF', F, [(so, '.silh'), (lo_, '.slF'), (lo_, '.slT'), (lo_, '.slS')]),
                  ('.blkV48', V48, [(so, '.silx1'), (lo_, '.slP')]), ('.blkU', U48, [(so, '.silx2')]),
                  ('.blkV16', V16, [(so, '.silx3')])]
-    place.append(('.blkPM', PM, [(pm, '.pm')] + ([] if probe else [(sr, '.slcx')]) + [(hg, '.hpg')]))
+    pm_parts = [(pm, '.pm')] + ([] if probe else [(sr, '.slcx')]) + [(hg, '.hpg')]
+    if cord:
+        pm_parts += [(lk, '.lfk'), (od, '.ord')]
+    place.append(('.blkPM', PM, pm_parts))
     ld = 'SECTIONS {\n' + ''.join(
-        f'  {n} 0x{r[0]:X} : {{ ' + ' '.join(f'{o}({s})' for o, s in parts) + ' }\n' for n, r, parts in place) + '}\n'
+        f'  {n} 0x{r[0]:X} : {{ ' + ' '.join(f'{o}({s})' for o, s in parts) +
+        (' } =0x4E71\n' if n == '.blkPM' else ' }\n') for n, r, parts in place) + '}\n'
     with tempfile.TemporaryDirectory() as td:
         import shutil
         shutil.copy(os.path.join(SIL, 'silence.o'), td)
@@ -178,9 +195,13 @@ def build(base, out, probe=False, slew=True):
         shutil.copy(os.path.join(PMD, 'portmap.o'), td)
         shutil.copy(os.path.join(SLR, 'slicer.o'), td)
         shutil.copy(os.path.join(HPG, 'hpgain.o'), td)
+        if cord:
+            shutil.copy(os.path.join(LFK, 'lfock.o'), td)
+            shutil.copy(os.path.join(LFK, 'list_order.o'), td)
         open(os.path.join(td, 'beta2.ld'), 'w').write(ld)
         elf = os.path.join(td, 'beta2.elf')
-        subprocess.run([BIN + 'm68k-elf-ld', '-T', 'beta2.ld', '-o', 'beta2.elf', so, lo_, pm, hg] + ([po] if probe else [sr]),
+        link_objs = [so, lo_, pm, hg] + ([po] if probe else [sr]) + ([lk, od] if cord else [])
+        subprocess.run([BIN + 'm68k-elf-ld', '-T', 'beta2.ld', '-o', 'beta2.elf'] + link_objs,
                        check=True, cwd=td)
         syms = {}
         for line in subprocess.run([BIN + 'm68k-elf-nm', elf], check=True, capture_output=True, text=True).stdout.splitlines():
@@ -238,15 +259,37 @@ def build(base, out, probe=False, slew=True):
         img[a + 15 - BASE] = k
     if not probe:
         struct.pack_into('>II', img, BM_SLOT - BASE, syms['slc_name'], syms['slc_key'])
-    img[0x18:0x30] = (b'EOS 4.71-b2 SliceProbe' if probe else NAME).ljust(24, b' ')
+    if cord:
+        if img[LFO_HOOK - BASE:LFO_HOOK - BASE + len(LFO_HOOK_STOCK)] != LFO_HOOK_STOCK:
+            raise SystemExit('LFO tick hook is not jmp lfo_tick')
+        names = b''.join(n + b'\0' for _, _, n in LFOCK_DESTS)
+        if img[LFOCK_NAME_AT - BASE:LFOCK_NAME_AT - BASE + len(names)] != bytes(len(names)):
+            raise SystemExit('header pad for Lfo1Ck/Lfo2Ck is not clear')
+        for code, _, _ in LFOCK_DESTS:
+            off = struct.unpack_from('>H', img, DEST_TABLE + 8 * code + 4 - BASE)[0]
+            if off != 0x1E:
+                raise SystemExit(f'destination {code} is in use')
+        img[LFO_HOOK - BASE:LFO_HOOK - BASE + 6] = b'\x4e\xf9' + struct.pack('>I', syms['cord_tick'])
+        img[LFOCK_NAME_AT - BASE:LFOCK_NAME_AT - BASE + len(names)] = names
+        for code, voff, name in LFOCK_DESTS:
+            ptr = LFOCK_NAME_AT + names.find(name + b'\0')
+            struct.pack_into('>IHH', img, DEST_TABLE + 8 * code - BASE, ptr, voff, 0x200)
+        for addr, name in LORD_FUNCS:
+            if img[addr - BASE:addr - BASE + 4] != LORD_HEAD:
+                raise SystemExit(f'{addr:#x} is not the stock list walker')
+            img[addr - BASE:addr - BASE + 6] = b'\x4e\xf9' + struct.pack('>I', syms[name])
+        print(f'lfock: cord_tick at {syms["cord_tick"]:#x}; list order at {syms["ord_d1"]:#x}')
+    header = b'EOS 4.71-b2 SliceProbe' if probe else NAME
+    img[0x18:0x30] = header.ljust(24, b' ')
     struct.pack_into('>II', img, 4, 0, 0xffffffff)
     c = eos_lz.csum(img)
     struct.pack_into('>II', img, 4, c, c ^ 0xffffffff)
     open(out, 'wb').write(img)
     json.dump(dict(syms, filter_tail=F[0], pm_free=syms['pm_end']), open(out + '.syms.json', 'w'), indent=1)
-    print(f'{out}: checksum {c:08x}; name {NAME.decode()!r}')
+    print(f'{out}: checksum {c:08x}; name {header.decode()!r}')
     return syms, F
 
 
 if __name__ == '__main__':
-    build(sys.argv[1], sys.argv[2], probe='--probe' in sys.argv, slew='--noslew' not in sys.argv)
+    build(sys.argv[1], sys.argv[2], probe='--probe' in sys.argv, slew='--noslew' not in sys.argv,
+          cord='--nocord' not in sys.argv)

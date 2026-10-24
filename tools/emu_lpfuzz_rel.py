@@ -86,8 +86,6 @@ def main():
     if bad:
         fails.append(f'unexpected changes at {[hex(a) for a in bad[:8]]} ({len(bad)} bytes)')
     print(f'{n} checks; {len(fails)} failures')
-    import collections
-    print(dict(collections.Counter(f.split(" ")[0] for f in fails)))
     for f in fails[:25]:
         print('  ' + f)
     sys.exit(1 if fails else 0)

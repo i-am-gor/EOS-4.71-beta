@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import emu_p2k as ep     # noqa: E402
 import build_lpfuzz      # noqa: E402
 import json   # noqa: E402
-from build_beta2 import A, B_, C, V16, V48, U48, REGION_END, MENU, EXEC_PTR, NAME, PEAS, HOOKS, DEST_TABLE, SNAP_AT, SLEW_AT, PM, PM_PB, BM_SLOT, SCN_NAME, PAN_TAB, HPG_CF, HPG_PQ, HPG_K, LFO_HOOK, LFOCK_NAME_AT, LFOCK_DESTS, LORD_FUNCS   # noqa: E402
+from build_beta2 import A, B_, C, V16, V48, U48, REGION_END, MENU, EXEC_PTR, NAME, PEAS, HOOKS, DEST_TABLE, SNAP_AT, SLEW_AT, PM, PM_PB, BM_SLOT, SCN_NAME, PAN_TAB   # noqa: E402
 from unicorn.m68k_const import (UC_M68K_REG_D0, UC_M68K_REG_D1, UC_M68K_REG_A0, UC_M68K_REG_A1,   # noqa: E402
                                 UC_M68K_REG_A7, UC_M68K_REG_D2, UC_M68K_REG_A6)
 from unicorn import UC_HOOK_CODE   # noqa: E402
@@ -79,11 +79,7 @@ def main():
     allowed = [(0x18, 0x30), (4, 12), A, B_, C, V16, V48, U48, (syms['filter_tail'], REGION_END),
                (MENU, MENU + 18), (EXEC_PTR, EXEC_PTR + 4), (DEST_TABLE + 8 * 55, DEST_TABLE + 8 * 56),
                (SNAP_AT, SNAP_AT + 22), (SLEW_AT, SLEW_AT + 30), PM, (PM_PB, PM_PB + 4),
-               (BM_SLOT, BM_SLOT + 8), (SCN_NAME, SCN_NAME + 7), (PAN_TAB + 126, PAN_TAB + 130),
-               (HPG_CF, HPG_CF + 10), (HPG_PQ, HPG_PQ + 6), (LFO_HOOK, LFO_HOOK + 6),
-               (LFOCK_NAME_AT, LFOCK_NAME_AT + 14)] + [(a + 15, a + 16) for a in HPG_K] + [
-               (DEST_TABLE + 8 * code, DEST_TABLE + 8 * code + 8) for code, _, _ in LFOCK_DESTS] + [
-               (addr, addr + 6) for addr, _ in LORD_FUNCS]
+               (BM_SLOT, BM_SLOT + 8), (SCN_NAME, SCN_NAME + 7), (PAN_TAB + 126, PAN_TAB + 130)]
     allowed += [(a, a + 6) for a in PEAS] + [(a, a + len(h[0]) // 2) for a, h in HOOKS.items()]
     bad = [i + B for i in range(len(rel_img)) if rel_img[i] != new_img[i]
            and not any(lo <= i + B < hi or lo <= i < hi for lo, hi in allowed)]

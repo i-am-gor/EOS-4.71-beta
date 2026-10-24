@@ -22,9 +22,9 @@ Lfo2Ck is grouped with the other LFO 2 destinations. The startup screen shows **
 - **WTScan** (renamed from SLpScn): notes start at the loop, fast moves glide instead of bursting.
 - **Balanced pan centre** (4.70 and 4.71-beta were about 0.24 dB right-heavy).
 
-**New in build 2:** the 2nd and 4th Order High-pass turn their level down as Q rises (up to −5.9 / −11.8 dB at
-Q 127), so high-Q settings no longer run into the filter chip's clipping point, and the 4 Pole LP+Fuzz level follows
-Q smoothly. See the [CHANGELOG](CHANGELOG.md).
+**Filter levels from build 2:** the 2nd and 4th Order High-pass turn their level down as Q rises (up to −5.9 / −11.8 dB
+at Q 127), and the 4 Pole LP+Fuzz level follows Q smoothly. Build 2 was withdrawn as its own release; this image
+includes those changes. See the [CHANGELOG](CHANGELOG.md).
 
 **From 4.71-beta:**
 
@@ -44,7 +44,7 @@ Q smoothly. See the [CHANGELOG](CHANGELOG.md).
 
 ## Get it
 
-E-mu's firmware is not distributed here. The **EOS Flasher** app builds 4.71-beta2 (or the earlier 4.71-beta)
+E-mu's firmware is not distributed here. The **EOS Flasher** app builds 4.71-beta2 +LfoCk (or the earlier 4.71-beta)
 from your own copy of
 E-mu's update file **EOS470.EXE** (it verifies the file is the original 4.70, applies this project's
 patch and verifies the result) and sends it to the E4 over MIDI.
@@ -53,7 +53,7 @@ Downloads (see [Releases](../../releases)):
 
 | App | macOS 11+ (universal: Apple silicon + Intel) | macOS 10.13 High Sierra+ (Intel) | Windows | Linux (Flatpak, x86_64) |
 |---|---|---|---|---|
-| **EOS Flasher**: build 4.71-beta2 (or 4.71-beta, or the original 4.70) and flash it over MIDI | `EOS-Flasher-macOS-universal.zip` | `EOS-Flasher-macOS-HighSierra-Intel.zip` | `EOS-Flasher-Windows.zip` | `EOS-Flasher-Linux-x86_64.flatpak` |
+| **EOS Flasher**: build 4.71-beta2 +LfoCk (or 4.71-beta, or the original 4.70) and flash it over MIDI | `EOS-Flasher-macOS-universal.zip` | `EOS-Flasher-macOS-HighSierra-Intel.zip` | `EOS-Flasher-Windows.zip` | `EOS-Flasher-Linux-x86_64.flatpak` |
 | **EOS Pan Test**: measure the pan bug on your E4 and report results | `EOS-PanTest-macOS-universal.zip` | `EOS-PanTest-macOS-HighSierra-Intel.zip` | `EOS-PanTest-Windows.zip` | `EOS-PanTest-Linux-x86_64.flatpak` |
 
 The apps are not signed with an Apple or Microsoft developer certificate, so the first launch needs one extra
@@ -117,7 +117,7 @@ To go back, do the same with **Original EOS 4.70**.
 | Path | Contents |
 |---|---|
 | `apps/` | Rust apps: `eos-flasher`, `eos-pantest`, shared `eos-core` (codec, patch, MIDI File Dump, editor SysEx) |
-| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 patch: only the 7,199 bytes this project wrote, applied to your own 4.70 |
+| `apps/eos-core/data/eos471beta2.e4p` | The 4.71-beta2 +LfoCk patch: only the 7,199 bytes this project wrote, applied to your own 4.70 |
 | `apps/eos-core/data/eos471beta.e4p` | The 4.71-beta patch (3,232 bytes) |
 | `patches/` | Assembler sources (ColdFire) of every change |
 | `tools/` | Python builders, emulator test suites, hardware test scripts, MIDI File Dump tool |

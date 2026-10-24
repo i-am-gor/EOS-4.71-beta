@@ -2,8 +2,9 @@
 
 ## EOS 4.71-beta2 +LfoCk
 
-Header name **EOS 4.71-beta2 +LfoCk**, image checksum `08868074`. Includes everything in EOS 4.71-beta2
-build 2 (`0886960e`).
+Header name **EOS 4.71-beta2 +LfoCk**, image checksum `08868074`. Includes the released EOS 4.71-beta2
+(`0886a24c`) and the filter-level changes kept in `tools/build_beta2.py` (build 2, checksum `0886960e`).
+Build 2 is not a separate release. `tools/build_beta2.py --nocord` rebuilds build 2.
 
 ### New: Lfo1Ck and Lfo2Ck cord destinations
 - A negative cord sum selects one of the 16 tempo divisions (4 bars through 1/32) and overrides Rate.
@@ -15,10 +16,15 @@ build 2 (`0886960e`).
   Lfo2Ck. The stored numbers are unchanged: Lag0in is 106, Lfo2Ck is 107.
 - Checked in the emulator (`tools/emu_lfock.py`, `tools/emu_listorder.py`) and on an E4 Ultra.
 
-## EOS 4.71-beta2 build 2
+## Unreleased: EOS 4.71-beta2 build 2 (withdrawn)
 
-Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (build 1,
-`0886a24c`); only the filter levels below change. Apps v0.2.1 build it by default. Checked in the emulator
+**Not available.** Build 2 was published on GitHub on 2026-10-23 and withdrawn the same day; its release and tag have
+been deleted. This branch does not republish it. **EOS 4.71-beta2 +LfoCk** above includes the filter-level changes,
+which stay in the source (`tools/build_beta2.py`). The released EOS 4.71-beta2 is the section below.
+
+Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (`0886a24c`);
+only the filter levels below change. The PC-keyboard keypad is as in EOS 4.70 (with Num Lock off, keypad − steps
+the value down and keypad + steps it up). Checked in the emulator
 (`tools/emu_filterfix.py`: every Q, note-on and real-time, with Master Headroom 0 and 15) and measured on an E4
 Ultra with the sine-sweep grid (`notes/filter_survey_beta2.md`).
 

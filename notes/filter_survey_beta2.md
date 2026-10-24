@@ -131,3 +131,6 @@ failures; two planted bugs caught (84 and 56 failures). Same grid on the E4 (`re
 **Decision (2026-10-23):** keep K 48 as built, including the distortion at cutoff 240 / Q 127. The cap at 42
 units and the revert to K 32 were both rejected. Build 0886948c (`sysex/EOS471-beta2-filterfix2.syx`) is the HP4
 final.
+
+The same HP4 code, renamed **EOS 4.71-beta2 build 2** (`0886960e`), was published on GitHub on 2026-10-23 and
+withdrawn and deleted the same day. These fixes are not in any release.

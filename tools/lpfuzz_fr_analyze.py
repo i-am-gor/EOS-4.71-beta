@@ -15,6 +15,7 @@ FS, T, F1, F2 = 48000, 20.0, 20.0, 20000.0
 K = math.log(F2 / F1)
 BANDS = [40 * 2 ** (i / 3) for i in range(26) if 40 * 2 ** (i / 3) <= 12600]
 NFFT, HOP = 4096, 1024
+BW = 1 / 12          # half-width (octaves) of the band around the sweep frequency counted as the fundamental
 
 
 def ideal():
@@ -42,7 +43,7 @@ def analyse(x, s):
         S = np.abs(np.fft.rfft(seg * win)) ** 2
 
         def band(fc):
-            m = (fb > fc * 2 ** (-1 / 12)) & (fb < fc * 2 ** (1 / 12))
+            m = (fb > fc * 2 ** (-BW)) & (fb < fc * 2 ** BW)
             return S[m].sum()
         fund = band(f)
         harm = sum(band(f * k) for k in range(2, 11) if f * k < 22000)

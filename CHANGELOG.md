@@ -1,5 +1,41 @@
 # Changelog: EOS 4.70 → EOS 4.71-beta
 
+## EOS 4.71-beta2 build 2
+
+Header name **EOS 4.71-beta2 build 2**, image checksum `0886960e`. Includes everything in EOS 4.71-beta2 (build 1,
+`0886a24c`); only the filter levels below change. Apps v0.2.1 build it by default. Checked in the emulator
+(`tools/emu_filterfix.py`: every Q, note-on and real-time, with Master Headroom 0 and 15) and measured on an E4
+Ultra with the sine-sweep grid (`notes/filter_survey_beta2.md`).
+
+### Fixed: high-pass filters ran hot at high Q
+- **Problem:** in beta1 and beta2 the 2nd and 4th Order High-pass kept the same level at every Q, so at high Q
+  they came out up to about 10 dB louder than in EOS 4.70. The 4th Order High-pass came within 3 dB of the
+  filter chip's clipping point at 15 cutoff/Q settings.
+- **Fix:** the filter's input level is now lowered as Q rises, through the same gain word that Master Headroom
+  uses. The cut grows with Q², so low Q is almost unchanged. It applies at note-on and when Q moves in real time.
+  Master Headroom still works on top of it.
+
+| Filter | Cut at Q 64 | Q 96 | Q 112 | Q 127 |
+|---|---|---|---|---|
+| 2nd Order High-pass | −1.2 dB | −2.9 dB | −4.2 dB | −5.9 dB |
+| 4th Order High-pass | −1.8 dB | −4.9 dB | −7.4 dB | −11.8 dB |
+| Contrary Band-pass | −0.6 dB | −1.3 dB | −1.8 dB | −2.3 dB |
+
+- **4th Order High-pass:** settings within 3 dB of the clipping point fell from 15 to 5. At Q 127 the peak at low
+  and medium cutoffs is now at or below EOS 4.70's (cutoffs 48 / 96 / 144: +11.8 / +17.3 / +21.7 dB against
+  stock's +25.8 / +23.2 / +19.8).
+- **Known behaviour:** at cutoff 240 with Q 127, the 4th Order High-pass distorts: a strong extra tone near
+  3.2 kHz appears (THD about −4 dB). It reproduces on every take and is kept as part of the filter's character.
+  Neighbouring settings are clean or mildly coloured: cutoffs 240–248 at Q 116–124 measure THD −48 to −35 dB.
+- **Contrary Band-pass:** the small trim does not stop it reaching the clipping point at high cutoffs and medium
+  Q. EOS 4.70's Contrary Band-pass does the same, so it is left as is.
+
+### Fixed: LP+Fuzz level stepped at note-on
+- **Problem:** at note-on the 4 Pole LP+Fuzz set its output level from a 16-step table, while real-time Q changes
+  used a smooth curve. Between Q 104 and Q 112 this left a 0.7–2 dB dip at cutoffs 176–240.
+- **Fix:** note-on now uses the same smooth curve. The dip is gone. Q 32 and Q 96–104 sit 1–1.5 dB lower at
+  note-on than before, matching what a real-time Q move already gave. The fuzz itself is unchanged.
+
 ## EOS 4.71-beta2
 
 Header name **EOS 4.71-beta2**, image checksum `0886a24c`. Includes everything in EOS 4.71-beta. Every change was

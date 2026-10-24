@@ -9,6 +9,9 @@ running when your sequencer stops, and a fix for the pan controls.
 Sample Edit, the **'Slice** cord destination, a **Slice** key in Beat Munger that turns a loop into a sliced
 preset, **WTScan** improvements (notes start at the loop, fast moves glide), and a balanced pan centre.
 
+**New in build 2:** high-pass filters no longer run into clipping at high Q, and the 4 Pole LP+Fuzz level
+follows Q smoothly. The startup screen shows **EOS 4.71-beta2 build 2**.
+
 Read this addendum together with the EOS 4.7 Operation Manual and the EOS 4.7 Operation Manual Addendum.
 Everything not mentioned here works as described there.
 
@@ -102,6 +105,24 @@ existing presets load as before and use the new models.
 **Smoother resonance (new in 4.71-beta2):** the OB-Xa lowpass, highpass and bandpass filters now change
 resonance smoothly through the whole **Q** range. In 4.71-beta, Q moved in steps of 4 or 8 values.
 
+**Level at high Q (new in build 2):** the 2nd and 4th Order High-pass and the Contrary Band-pass turn their
+input level down as **Q** rises, so high-Q settings no longer run into the filter chip's clipping point. The
+change is small at low Q and largest at Q 127. It also applies when Q is modulated in real time, and **Master
+Headroom** still works on top of it.
+
+| Filter type | Q 64 | Q 96 | Q 112 | Q 127 |
+|---|---|---|---|---|
+| 2nd Order High-pass | −1.2 dB | −2.9 dB | −4.2 dB | −5.9 dB |
+| 4th Order High-pass | −1.8 dB | −4.9 dB | −7.4 dB | −11.8 dB |
+| Contrary Band-pass | −0.6 dB | −1.3 dB | −1.8 dB | −2.3 dB |
+
+High-pass presets made in 4.71-beta or the first 4.71-beta2 build (build 1) play quieter at high Q. Raise the voice
+volume if needed.
+
+> **Note:** On the 4th Order High-pass, a **cutoff of 240 with Q 127** distorts: a strong extra tone near
+> 3.2 kHz appears. This setting is left as it is, as part of the filter's character. Settings close to it
+> (cutoffs 240–248, Q 116–124) are slightly coloured; lower cutoffs or Q are clean.
+
 ### 4 Pole LP+Fuzz (new in 4.71-beta2)
 
 **4 Pole LP+Fuzz** is a new filter type: the OB-Xa 4-pole ladder lowpass with a drive stage that pushes the
@@ -115,6 +136,8 @@ the numbers of all other filter types are unchanged.
   frequency from about Q 64, and across the whole passband from about Q 96. At high cutoffs (200 and up) it
   stays clean.
 - Frequency and Q can both be modulated in real time (FilFreq and FilRes cords).
+- The output level follows **Q** smoothly. In build 1 of 4.71-beta2, the level stepped at note-on and dipped
+  0.7–2 dB between Q 104 and Q 112 at high cutoffs; build 2 removes the dip.
 
 ---
 
@@ -468,4 +491,5 @@ system.
 - Beat Munger **Slice** makes at most 92 slices (keys 36 to 127). A slice can start with a small click where the
   waveform has no zero crossing near the cut.
 - **'Slice** and **WTScan** share one cord sum: do not use both on one voice.
+- The 4th Order High-pass distorts at cutoff 240 with Q 127 (see Filters: OB-Xa Models).
 - EOS 4.71-beta2 runs on Ultra models only, like EOS 4.70.

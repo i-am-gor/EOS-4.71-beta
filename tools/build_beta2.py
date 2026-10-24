@@ -22,6 +22,7 @@ freeing ~2 KB after it (NOP fill), which holds the Beat Munger "Slice" key (patc
 0xB71F2 between Cancel and Stop; notes/slicer_design.md).
 Tick loop-shift glide: 0x5FECA jsr shift_t, 0x5FED0..0x5FEED -> patches/slpscn/slew.s (max LIM samples per tick). destination 55 -> "'Slice" (0x1C, 0x0100);
 destination 58 renamed SLpScn -> WTScan (same length, in place);
+HP2/HP4/Contrary BP word 9 lowered with Q (patches/hpgain/hpgain.s, K in descriptor byte 15);
 pan table 0x61590 entries 63/64 -322/-311 -> -316/-316: centre pan balanced (was 1 step = ~0.24 dB right-heavy).
 """
 import json, os, struct, subprocess, sys, tempfile, zlib
@@ -35,9 +36,10 @@ ROOT = os.path.dirname(HERE)
 SIL, SLC = os.path.join(ROOT, 'patches', 'silence'), os.path.join(ROOT, 'patches', 'slice')
 PMD = os.path.join(ROOT, 'patches', 'portmap')
 SLR = os.path.join(ROOT, 'patches', 'slicer')
+HPG = os.path.join(ROOT, 'patches', 'hpgain')
 BIN = '/opt/homebrew/bin/'
 BASE = 0x20000
-NAME = b'EOS 4.71-beta2'
+NAME = b'EOS 4.71-beta2 build 2'
 DEFAULT_VEC = 0x20926
 REGION_END = 0x683F0
 MENU, EXEC_PTR, PASTE = 0xA4AB0, 0xFB8E2, 0xF79D4
@@ -62,6 +64,9 @@ PM, PM_CRC, PM_PA, PM_PB = (0x15EF5C, 0x15F818), 0x8076C4B4, 0x15FAC4, 0x15FAD4
 PM_PA_TARGET = 0x15EF5C
 PAN_TAB = 0x61590                         # pan gain table (128 words, read only by 0x60784): entries 63/64
 PAN_FIX = ((-322, -311), (-316, -316))   # stock -> equal, so centre (index 64 reads 64 and 63) is balanced
+HPG_CF, HPG_CF_STOCK = 0x667CE, '203910004d7c21400024'   # HP/BP common_cf: word 9 = base gain
+HPG_PQ, HPG_PQ_STOCK = 0x6680C, '0281000000ff'           # HP/BP common_pq: andi.l #0xFF,d1
+HPG_K = {0x660E0: 32, 0x66A40: 48, 0x66A8C: 16}          # descriptor byte 15 (HP2, HP4, Contrary BP): word-9 cut K (HP4 48 after re-measure)
 SCN_NAME = 0x2012E                        # destination 58's name (lfosync.s name_scn): 'SLpScn' -> 'WTScan'
 BM_KEYS, BM_SLOT = 0xB71E2, 0xB71F2      # Beat Munger soft keys {name, handler}; 0xB71F2 is the empty one
 NOP_SUBQ = bytes.fromhex('598f4e714e71')
@@ -132,6 +137,11 @@ def build(base, out, probe=False, slew=True):
         raise SystemExit('port-map builders not stock')
     if struct.unpack('>hh', img[PAN_TAB + 126 - BASE:PAN_TAB + 130 - BASE]) != PAN_FIX[0]:
         raise SystemExit('pan table entries 63/64 not stock')
+    if img[HPG_CF - BASE:HPG_CF - BASE + 10].hex() != HPG_CF_STOCK or img[HPG_PQ - BASE:HPG_PQ - BASE + 6].hex() != HPG_PQ_STOCK:
+        raise SystemExit('HP/BP common_cf / common_pq not as expected')
+    for a in HPG_K:
+        if img[a + 12 - BASE] != 0 or img[a + 15 - BASE] != 0:
+            raise SystemExit(f'HP/BP descriptor {a:#x} retshift/byte 15 not 0')
     if img[SCN_NAME - BASE:SCN_NAME - BASE + 7] != b'SLpScn\0':
         raise SystemExit('destination 58 name not SLpScn')
     if img[BM_SLOT - BASE:BM_SLOT - BASE + 8] != bytes(8) or u32(img, BM_SLOT + 12) != 0xB60D8:
@@ -147,7 +157,8 @@ def build(base, out, probe=False, slew=True):
     portmap_rows(img)
     asm(PMD, 'portmap.s', 'portmap.o')
     asm(SLR, 'slicer.s', 'slicer.o')
-    so, lo_, po, pm, sr = 'silence.o', 'slice.o', 'probe.o', 'portmap.o', 'slicer.o'   # linked from a temp dir (the script cannot quote paths)
+    asm(HPG, 'hpgain.s', 'hpgain.o')
+    so, lo_, po, pm, sr, hg = 'silence.o', 'slice.o', 'probe.o', 'portmap.o', 'slicer.o', 'hpgain.o'   # linked from a temp dir (the script cannot quote paths)
     if probe:
         place = [('.blkA', A, [(lo_, '.slA')]), ('.blkB', B_, [(lo_, '.slB')]), ('.blkF', F, [(lo_, '.slF'), (lo_, '.slT'), (lo_, '.slS')]),
                  ('.blkV48', V48, [(po, '.prb'), (lo_, '.slP')]), ('.blkU', U48, [(po, '.prbio')])]
@@ -156,7 +167,7 @@ def build(base, out, probe=False, slew=True):
                  ('.blkC', C, [(so, '.silstr')]), ('.blkF', F, [(so, '.silh'), (lo_, '.slF'), (lo_, '.slT'), (lo_, '.slS')]),
                  ('.blkV48', V48, [(so, '.silx1'), (lo_, '.slP')]), ('.blkU', U48, [(so, '.silx2')]),
                  ('.blkV16', V16, [(so, '.silx3')])]
-    place.append(('.blkPM', PM, [(pm, '.pm')] + ([] if probe else [(sr, '.slcx')])))
+    place.append(('.blkPM', PM, [(pm, '.pm')] + ([] if probe else [(sr, '.slcx')]) + [(hg, '.hpg')]))
     ld = 'SECTIONS {\n' + ''.join(
         f'  {n} 0x{r[0]:X} : {{ ' + ' '.join(f'{o}({s})' for o, s in parts) + ' }\n' for n, r, parts in place) + '}\n'
     with tempfile.TemporaryDirectory() as td:
@@ -166,9 +177,10 @@ def build(base, out, probe=False, slew=True):
         shutil.copy(os.path.join(SLC, 'probe.o'), td)
         shutil.copy(os.path.join(PMD, 'portmap.o'), td)
         shutil.copy(os.path.join(SLR, 'slicer.o'), td)
+        shutil.copy(os.path.join(HPG, 'hpgain.o'), td)
         open(os.path.join(td, 'beta2.ld'), 'w').write(ld)
         elf = os.path.join(td, 'beta2.elf')
-        subprocess.run([BIN + 'm68k-elf-ld', '-T', 'beta2.ld', '-o', 'beta2.elf', so, lo_, pm] + ([po] if probe else [sr]),
+        subprocess.run([BIN + 'm68k-elf-ld', '-T', 'beta2.ld', '-o', 'beta2.elf', so, lo_, pm, hg] + ([po] if probe else [sr]),
                        check=True, cwd=td)
         syms = {}
         for line in subprocess.run([BIN + 'm68k-elf-nm', elf], check=True, capture_output=True, text=True).stdout.splitlines():
@@ -220,6 +232,10 @@ def build(base, out, probe=False, slew=True):
     struct.pack_into('>I', img, PM_PB - BASE, syms['pm_B'])
     img[SCN_NAME - BASE:SCN_NAME - BASE + 7] = b'WTScan\0'
     struct.pack_into('>hh', img, PAN_TAB + 126 - BASE, *PAN_FIX[1])
+    img[HPG_CF - BASE:HPG_CF - BASE + 10] = bytes.fromhex('4eb9') + struct.pack('>I', syms['hg_cf']) + bytes.fromhex('4e714e71')
+    img[HPG_PQ - BASE:HPG_PQ - BASE + 6] = bytes.fromhex('4eb9') + struct.pack('>I', syms['hg_pq'])
+    for a, k in HPG_K.items():
+        img[a + 15 - BASE] = k
     if not probe:
         struct.pack_into('>II', img, BM_SLOT - BASE, syms['slc_name'], syms['slc_key'])
     img[0x18:0x30] = (b'EOS 4.71-b2 SliceProbe' if probe else NAME).ljust(24, b' ')

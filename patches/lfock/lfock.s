@@ -11,11 +11,22 @@
 | predecrement. divu.l into d0 encodes a remainder divide on 5206e; the quotient form uses d3.
 | move.w into a data register does not sign-extend.
 | Hooks (build_beta2.py): 0x61BF4 jmp cord_tick. Dest 98 / 107, flags 0x200.
+| The two front-panel Rate fields (0x6B5B0, 0x6B65A) get rate_get / rate_set. While the gap word
+| is negative the stored Rate byte becomes 128+division (the existing Rate names) and the setter
+| does not write. The LFO page paints that byte when it opens; rate_show asks it to paint again.
 
         .equ    LFO_TICK,      0x00020400
         .equ    SYNC_BODY,     0x0002040E
         .equ    LFO2_TICK_RET, 0x00061D70
         .equ    FULL,          4032
+        .equ    RATE_SET,      0x00069F80
+        .equ    LFO_FMT,       0x00068BF0
+        .equ    VOICE_NOW,     0x00139728
+        .equ    VOICE_IX,      0x1000134A
+        .equ    EDIT_VOICE,    0x100040AC   | preset screen's voice
+        .equ    HOLD,          0x100003EC   | two saved Rate bytes, magic at +2. Nothing in the image reads this.
+        .equ    PAGE_ID,       0x1000415C   | preset page being shown
+        .equ    PAGE_CACHE,    0x102C327C   | built pages, index = page id + 0xF5
 
         .section .lfk,"ax"
         .balign 4
@@ -27,7 +38,8 @@ cord_tick:
         move.w  0x1C(%a5),%d0           | LFO 1 gap (voice+0x1A4)
         bra.s   3f
 2:      move.w  -2(%a5),%d0             | LFO 2 gap (voice+0x1A6)
-3:      tst.w   %d0
+3:      bsr     rate_publish            | panel shows the edited voice's Rate byte
+        tst.w   %d0
         bmi.s   4f
         jmp     LFO_TICK                | zero or positive: Rate path
 4:      ext.l   %d0
@@ -36,20 +48,191 @@ cord_tick:
         cmpi.l  #LFO2_TICK_RET,%d1
         bne.s   5f
         subq.l  #1,%d0                  | undo the stock long-1 in the low half
-5:      neg.l   %d0                     | magnitude
-        subq.l  #1,%d0
-        lsl.l   #4,%d0                  | (mag-1)*16
-        move.l  %d0,%d3
-        move.l  #FULL,%d2
-        divu.l  %d2,%d3                 | quotient in d3
-        move.l  %d3,%d0
-        cmpi.l  #15,%d0
-        bls.s   6f
-        moveq   #15,%d0
-6:      ori.l   #0xA000,%d0             | bit 15 active, bit 13 key sync
+5:      bsr     cord_div
+        ori.l   #0xA000,%d0             | bit 15 active, bit 13 key sync
         cmpi.l  #LFO2_TICK_RET,%d1
         bne.s   7f
         ori.l   #0x4000,%d0             | LFO 2 note-tick base
 7:      movem.l (%sp),%d2-%d3
         lea     8(%sp),%sp
         jmp     SYNC_BODY
+
+| d0 = sign-extended gap word, already adjusted for LFO 2. Negative. Returns the division in d0.
+| Clobbers d2-d3. The caller has saved them.
+cord_div:
+        neg.l   %d0
+        subq.l  #1,%d0
+        lsl.l   #4,%d0
+        move.l  %d0,%d3
+        move.l  #FULL,%d2
+        divu.l  %d2,%d3
+        move.l  %d3,%d0
+        cmpi.l  #15,%d0
+        bls.s   1f
+        moveq   #15,%d0
+1:      rts
+
+| Preset screen's voice in a0, or the indexed one when that pointer is clear.
+| Clobbers d0/d1/a0/a1.
+voice_now:
+        move.l  EDIT_VOICE,%d0
+        bne.s   1f
+        move.w  VOICE_IX,%d0
+        ext.l   %d0
+        move.l  %d0,-(%sp)
+        jsr     VOICE_NOW
+        addq.l  #4,%sp
+1:      movea.l %d0,%a0
+        rts
+
+| d0.w = the gap word just read, d1 = the tick return address. Puts 128+division into the
+| edited voice's Rate byte while the word is negative, and puts the original byte back when
+| it is not. The panel redraws that byte; the sounding path does not read it while overridden.
+| Preserves d0, d1 and a5.
+rate_publish:
+        lea     -24(%sp),%sp
+        movem.l %d0-%d3/%a0-%a1,(%sp)
+        move.l  EDIT_VOICE,%a0
+        move.l  %a0,%d2
+        beq.w   9f
+        moveq   #0,%d2
+        move.b  HOLD+2,%d2
+        cmpi.l  #0xC3,%d2
+        beq.s   1f
+        moveq   #-1,%d2
+        move.b  %d2,HOLD
+        move.b  %d2,HOLD+1
+        moveq   #0,%d2
+        move.b  #0xC3,%d2
+        move.b  %d2,HOLD+2
+1:      lea     HOLD,%a1
+        cmpi.l  #LFO2_TICK_RET,%d1
+        bne.s   2f
+        addq.l  #1,%a1
+        move.w  %d0,0x1A6(%a0)
+        moveq   #0,%d3
+        move.w  #0x9E,%d3
+        bra.s   3f
+2:      move.w  %d0,0x1A4(%a0)
+        moveq   #0,%d3
+        move.w  #0x96,%d3
+3:      adda.l  %d3,%a0                 | a0 = Rate byte
+        tst.w   %d0
+        bmi.s   4f
+        moveq   #0,%d2
+        move.b  (%a1),%d2
+        cmpi.l  #0xFF,%d2
+        beq.s   9f
+        moveq   #0,%d3
+        move.b  (%a0),%d3
+        cmp.l   %d2,%d3
+        beq.s   7f
+        move.b  %d2,(%a0)
+        bsr     rate_show
+7:      move.b  #0xFF,(%a1)
+        bra.s   9f
+4:      moveq   #0,%d2
+        move.b  (%a1),%d2
+        cmpi.l  #0xFF,%d2
+        bne.s   5f
+        move.b  (%a0),(%a1)             | keep the Rate this cord is covering
+5:      move.l  (%sp),%d0
+        ext.l   %d0
+        cmpi.l  #LFO2_TICK_RET,%d1
+        bne.s   6f
+        subq.l  #1,%d0
+6:      bsr     cord_div
+        addi.l  #128,%d0
+        moveq   #0,%d2
+        move.b  %d0,%d2
+        moveq   #0,%d3
+        move.b  (%a0),%d3
+        cmp.l   %d2,%d3
+        beq.s   9f
+        move.b  %d2,(%a0)
+        bsr     rate_show
+9:      movem.l (%sp),%d0-%d3/%a0-%a1
+        lea     24(%sp),%sp
+        rts
+
+| The open LFO page (id 0x12 or 0x13) reads its fields again, the same way re-opening it does.
+| Preserves a5. No page object means there is nothing to draw.
+rate_show:
+        move.l  PAGE_ID,%d0
+        subi.l  #0x12,%d0
+        moveq   #1,%d1
+        cmp.l   %d1,%d0
+        bhi.s   9f
+        addq.l  #7,%d0                  | moveq #-11,d6 in the page opener: index is page-11
+        movea.l #PAGE_CACHE,%a0
+        move.l  (%a0,%d0.l*4),%a1
+        move.l  %a1,%d1
+        beq.s   9f
+        move.l  %a5,-(%sp)
+        pea     3
+        move.l  %d0,-(%sp)
+        jsr     0xCC1CC
+        addq.l  #8,%sp
+        movea.l (%sp)+,%a5
+9:      rts
+
+| (descriptor) -> displayed rate. 128+division while that LFO's gap word is negative.
+| d1-d3/a2 are saved: the field reader only consumes d0, and the voice lookup may clobber the rest.
+        .globl  rate_get
+rate_get:
+        lea     -20(%sp),%sp
+        movem.l %d1-%d3/%a2,(%sp)
+        move.l  24(%sp),16(%sp)
+        bsr     voice_now
+        move.l  %a0,%d0
+        beq.s   8f
+        movea.l 16(%sp),%a2
+        moveq   #0,%d1
+        move.w  0x10(%a2),%d1
+        cmpi.l  #0x9E,%d1
+        beq.s   2f
+        move.w  0x1A4(%a0),%d0
+        bra.s   3f
+2:      move.w  0x1A6(%a0),%d0
+3:      tst.w   %d0
+        bmi.s   4f
+        move.l  %a0,%a1
+        adda.l  %d1,%a1
+        moveq   #0,%d0
+        move.b  (%a1),%d0
+        bra.s   8f
+4:      ext.l   %d0
+        cmpi.l  #0x9E,%d1
+        bne.s   5f
+        subq.l  #1,%d0
+5:      bsr     cord_div
+        addi.l  #128,%d0
+8:      movem.l (%sp),%d1-%d3/%a2
+        lea     20(%sp),%sp
+        rts
+
+| (descriptor, value). While the gap word is negative the stored Rate is left alone.
+        .globl  rate_set
+rate_set:
+        lea     -20(%sp),%sp
+        movem.l %d1-%d3/%a2,(%sp)
+        move.l  24(%sp),16(%sp)
+        bsr     voice_now
+        move.l  %a0,%d0
+        beq.s   7f
+        movea.l 16(%sp),%a2
+        moveq   #0,%d1
+        move.w  0x10(%a2),%d1
+        cmpi.l  #0x9E,%d1
+        beq.s   2f
+        move.w  0x1A4(%a0),%d0
+        bra.s   3f
+2:      move.w  0x1A6(%a0),%d0
+3:      tst.w   %d0
+        bmi.s   8f
+7:      movem.l (%sp),%d1-%d3/%a2
+        lea     20(%sp),%sp
+        jmp     RATE_SET
+8:      movem.l (%sp),%d1-%d3/%a2
+        lea     20(%sp),%sp
+        rts

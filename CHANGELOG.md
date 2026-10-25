@@ -2,7 +2,7 @@
 
 ## EOS 4.71-beta2 +LfoCk
 
-Header name **EOS 4.71-beta2 +LfoCk**, image checksum `08868db3`. Includes the released EOS 4.71-beta2 (`0886a24c`) and not the
+The startup screen shows **LfoCk** and the build time (`LfoCk YYYYMMDD HH:MM:SS`). The builder prints the image checksum. Includes the released EOS 4.71-beta2 (`0886a24c`) and not the
 withdrawn build 2 filter changes. `tools/build_beta2.py --nocord` rebuilds the release.
 
 ### New: Lfo1Ck and Lfo2Ck cord destinations
@@ -10,7 +10,9 @@ withdrawn build 2 filter changes. `tools/build_beta2.py --nocord` rebuilds the r
   Full scale, a controller at CC 127 through panel amount −100, is 1/32. Smaller amounts are slower, in
   16 even steps. Zero or a positive sum leaves Rate alone, including a synced Rate.
 - While the sum is negative the LFO restarts on each note. Shape and Delay still work. The Rate cord,
-  Variation and the LFO trigger are ignored, as they are for a synced Rate.
+  Variation and the LFO trigger are ignored, as they are for a synced Rate. That LFO's Rate field shows
+  the cord's division and follows the controller. Turning the knob does not change the Rate underneath.
+  The field keeps its normal colour.
 - Lfo1Ck follows Lfo1Trg in the destination list. Lfo2Ck follows Lfo2Trg, and Lag0in follows
   Lfo2Ck. The stored numbers are unchanged: Lag0in is 106, Lfo2Ck is 107.
 - Checked in the emulator (`tools/emu_lfock.py`, `tools/emu_listorder.py`).

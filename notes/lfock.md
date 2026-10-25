@@ -1,6 +1,7 @@
 # LFO clock from a cord (Lfo1Ck / Lfo2Ck)
 
-Build: `tools/build_beta2.py BASE.bin OUT.bin` (header "EOS 4.71-beta2 +LfoCk").
+Build: `tools/build_beta2.py BASE.bin OUT.bin`. The About name is `LfoCk` plus the build time
+(`LfoCk YYYYMMDD HH:MM:SS`), so the startup screen identifies the image.
 `tools/build_beta2.py --nocord` is the EOS 4.71-beta2 release, checksum `0886a24c`, without this patch.
 Test: `tools/emu_lfock.py BASE.bin`, `tools/emu_listorder.py BASE.bin`.
 
@@ -28,9 +29,9 @@ destination 106. Presets store the id, not the list position.
   The four bytes between the two LFO blocks, voice+0x1A4, are unused by the LFO tick. Voice init
   stores the long `1` there, so the LFO 2 half (voice+0x1A6) starts at 1 and the running sum keeps
   that +1. The prologue subtracts it before measuring the magnitude.
-- Tick hook `0x61BF4` (`jmp lfo_tick`) jumps to `cord_tick` in the port-map hole, after the high-pass
-  headroom code. Return address `0x61D70` means this call is LFO 2 (`move.w -2(a5)`); otherwise it is
-  LFO 1 (`move.w 0x1C(a5)`, because a5 is the LFO block at voice+0x188).
+- Tick hook `0x61BF4` (`jmp lfo_tick`) jumps to `cord_tick` in the port-map hole. Return address
+  `0x61D70` means this call is LFO 2 (`move.w -2(a5)`); otherwise it is LFO 1 (`move.w 0x1C(a5)`,
+  because a5 is the LFO block at voice+0x188).
 - A negative sum becomes `d0 = 0xA000|div` (bit 15 sync, bit 13 key sync), plus bit 14 for LFO 2, and
   jumps to the sync body at `0x2040E`. Otherwise it jumps to `lfo_tick` at `0x20400`.
 - `FUN_00061BC0` saves only d5–d7/a5. The divide uses d2 and d3, and the sync body saves d2–d4 only
@@ -51,3 +52,19 @@ walkers are retargeted (`patches/lfock/list_order.s`):
 
 `0x62D00` and `0x62D60` agree on every index, and each id round-trips through `0x62C98`.
 Test: `tools/emu_listorder.py`.
+
+## Rate field
+
+The LFO page shows the Rate byte on the preset screen's voice (`0x100040AC`). It does not call the
+descriptor getter while the controller moves, so a getter alone leaves the name where it was.
+`rate_publish`, called from the tick, writes `128 + division` into that byte while the cord is
+negative and writes the previous byte back when the cord lets go. The two original bytes are kept at
+`0x100003EC` (nothing in the image reads that long). The page paints the byte when it opens. When the
+byte changes and the open page is an LFO page (`0x1000415C` is `0x12` or `0x13`), `rate_show` runs
+the same field refresh as opening that page again. The page's saved object is at cache index
+`page - 11` (the opener's `moveq #-11`). The getter and setter stay on the descriptors for
+the parameter reader: the setter still ignores the knob while the cord is negative.
+
+Saving the preset while a cord is held stores the division as Rate. Letting the cord go restores the
+previous Rate in the voice. The field keeps its normal colour. The editor and SysEx Rate descriptors
+are left stock.

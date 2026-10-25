@@ -28,7 +28,7 @@ Lfo2Ck (107) override Rate with the 16 tempo divisions while their cord sum is n
 destination list visits 107 before 106 so Lfo2Ck is grouped with LFO 2; Lag0in stays id 106
 (patches/lfock/list_order.s). --nocord builds the EOS 4.71-beta2 release without that patch.
 """
-import json, os, struct, subprocess, sys, tempfile, zlib
+import datetime, json, os, struct, subprocess, sys, tempfile, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -43,7 +43,14 @@ LFK = os.path.join(ROOT, 'patches', 'lfock')
 BIN = '/opt/homebrew/bin/'
 BASE = 0x20000
 NAME = b'EOS 4.71-beta2'
-CORD_NAME = b'EOS 4.71-beta2 +LfoCk'
+LFO_FMT = 0x68BF0
+
+
+def cord_label():
+    """About-screen name, stamped so a flash can be matched to the build. 23 bytes."""
+    return datetime.datetime.now().strftime('LfoCk %Y%m%d %H:%M:%S').encode()
+
+
 DEFAULT_VEC = 0x20926
 REGION_END = 0x683F0
 MENU, EXEC_PTR, PASTE = 0xA4AB0, 0xFB8E2, 0xF79D4
@@ -72,6 +79,8 @@ SCN_NAME = 0x2012E                        # destination 58's name (lfosync.s nam
 LFO_HOOK, LFO_HOOK_STOCK = 0x61BF4, bytes.fromhex('4ef900020400')   # jmp lfo_tick (0x20400)
 LFOCK_NAME_AT = 0x201AE               # 18 bytes free before 0x201C0; Lfo1Ck / Lfo2Ck names
 LFOCK_DESTS = ((98, 0x1A4, b'Lfo1Ck'), (107, 0x1A6, b'Lfo2Ck'))
+UI_RATE = (0x6B5B0, 0x6B65A)   # front-panel LFO 1 / LFO 2 Rate descriptors
+RATE_SET_STOCK = 0x69F80
 LORD_HEAD = bytes.fromhex('4feffff0')   # lea -16(sp), sp at each list walker
 LORD_FUNCS = ((0x62D00, 'ord_d1'), (0x62D60, 'ord_stk'), (0x62C98, 'ord_rev'))
 BM_KEYS, BM_SLOT = 0xB71E2, 0xB71F2      # Beat Munger soft keys {name, handler}; 0xB71F2 is the empty one
@@ -263,8 +272,14 @@ def build(base, out, probe=False, slew=True, cord=True):
             if img[addr - BASE:addr - BASE + 4] != LORD_HEAD:
                 raise SystemExit(f'{addr:#x} is not the stock list walker')
             img[addr - BASE:addr - BASE + 6] = b'\x4e\xf9' + struct.pack('>I', syms[name])
-        print(f'lfock: cord_tick at {syms["cord_tick"]:#x}; list order at {syms["ord_d1"]:#x}')
-    header = b'EOS 4.71-b2 SliceProbe' if probe else (CORD_NAME if cord else NAME)
+        for a in UI_RATE:
+            fmt, get, setter = struct.unpack_from('>III', img, a + 0x16 - BASE)
+            if (fmt, get, setter) != (LFO_FMT, 0, RATE_SET_STOCK):
+                raise SystemExit(f'Rate descriptor {a:#x} not stock ({fmt:#x}, {get:#x}, {setter:#x})')
+            struct.pack_into('>II', img, a + 0x1A - BASE, syms['rate_get'], syms['rate_set'])
+        print(f'lfock: cord_tick at {syms["cord_tick"]:#x}; list order at {syms["ord_d1"]:#x}; '
+              f'rate_get at {syms["rate_get"]:#x}')
+    header = b'EOS 4.71-b2 SliceProbe' if probe else (cord_label() if cord else NAME)
     img[0x18:0x30] = header.ljust(24, b' ')
     struct.pack_into('>II', img, 4, 0, 0xffffffff)
     c = eos_lz.csum(img)

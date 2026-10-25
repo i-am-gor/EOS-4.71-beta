@@ -10,9 +10,10 @@ Sample Edit, the **'Slice** cord destination, a **Slice** key in Beat Munger tha
 preset, **WTScan** improvements (notes start at the loop, fast moves glide), and a balanced pan centre.
 
 **New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects that LFO's tempo
-division (4 bars through 1/32) and overrides Rate. An amount of zero or above leaves Rate alone. In the
-cord list, Lfo2Ck follows Lfo2Trg. The startup screen shows **EOS 4.71-beta2 +LfoCk**. This image is the
-released EOS 4.71-beta2 plus that cord.
+division (4 bars through 1/32) and overrides Rate. While it does, the Rate field shows that division and
+follows the controller, and the knob does not change the Rate underneath. An amount of zero or above
+leaves Rate alone. In the cord list, Lfo2Ck follows Lfo2Trg. The startup screen shows **LfoCk** and the
+time the image was built. This image is the released EOS 4.71-beta2 plus that cord.
 
 Read this addendum together with the EOS 4.7 Operation Manual and the EOS 4.7 Operation Manual Addendum.
 Everything not mentioned here works as described there.
@@ -212,6 +213,9 @@ divisions.
 
 - While the cord is negative, that LFO restarts at the beginning of its cycle on each new note. The
   LFO **Sync** switch is not used. **Shape** and **Delay** still work.
+- While the cord is negative, that LFO's **Rate** field shows the cord's division (the same names as a
+  synced Rate, from 4bars to 1/32). Turning the knob does not change the stored Rate. At zero or above,
+  Rate shows and edits as before. The field keeps its normal colour.
 - While the cord is negative, the Rate cord (Lfo1Rt / Lfo2Rt), **Variation** and the LFO trigger are
   ignored, as they are when Rate itself is synced.
 - The division follows the master clock, internal or external, the same way a synced Rate does.

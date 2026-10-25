@@ -7,6 +7,8 @@ Builds the release (--nocord) and the LfoCk image, then:
 gap clear: init and ticks match the release (Rate 0..143).
 A negative gap sum scales onto the 16 lengths (full scale 4032 = 1/32). Zero or positive matches the release.
 d2 and d3 survive every tick.
+The Rate getter shows 128+division while the gap word is negative, and the stored byte otherwise.
+The setter leaves that byte alone while the word is negative.
 """
 from __future__ import annotations
 
@@ -20,11 +22,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import build_beta2  # noqa: E402
 
 from unicorn import Uc, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN
-from unicorn.m68k_const import UC_M68K_REG_A7, UC_M68K_REG_D2, UC_M68K_REG_D3, UC_CPU_M68K_CFV4E
+from unicorn.m68k_const import (
+    UC_M68K_REG_A2, UC_M68K_REG_A7, UC_M68K_REG_D0, UC_M68K_REG_D1,
+    UC_M68K_REG_D2, UC_M68K_REG_D3, UC_CPU_M68K_CFV4E)
 
 BASE, RET = 0x20000, 0x1000
 RAM, STACK = 0x10000000, 0x10080000
 VOICE, PARAMS = 0x10010000, 0x10011000
+VOICE_IX = 0x1000134A
+UI_RATE = ((1, 0x6B5B0, 0x96), (2, 0x6B65A, 0x9E))
+RATE_SET_STOCK = 0x69F80
 LFO1, LFO2 = VOICE + 0x188, VOICE + 0x1A8
 GAP1, GAP2 = VOICE + 0x1A4, VOICE + 0x1A6
 INIT1, INIT2, TICK1, TICK2 = 0x61A50, 0x61CDC, 0x61BC0, 0x61D5C
@@ -101,6 +108,25 @@ class Emu:
         self.w(GAP1 if n == 1 else GAP2, "H", word)
         return mag
 
+    def stub_voice(self):
+        """0x139728 returns the test voice. The real lookup needs a loaded preset."""
+        self.mu.mem_write(0x139728, bytes.fromhex("203c100100004e75"))
+
+    def rate_call(self, fn, *args):
+        self.mu.reg_write(UC_M68K_REG_D1, 0x11111111)
+        self.mu.reg_write(UC_M68K_REG_D2, 0x13579BDF)
+        self.mu.reg_write(UC_M68K_REG_D3, 0x2468ACE0)
+        self.mu.reg_write(UC_M68K_REG_A2, 0xA2A2A2A2)
+        self.call(fn, *args)
+        kept = (
+            self.mu.reg_read(UC_M68K_REG_D1) & 0xFFFFFFFF,
+            self.mu.reg_read(UC_M68K_REG_D2) & 0xFFFFFFFF,
+            self.mu.reg_read(UC_M68K_REG_D3) & 0xFFFFFFFF,
+            self.mu.reg_read(UC_M68K_REG_A2) & 0xFFFFFFFF,
+        )
+        return self.mu.reg_read(UC_M68K_REG_D0) & 0xFFFFFFFF, kept == (
+            0x11111111, 0x13579BDF, 0x2468ACE0, 0xA2A2A2A2)
+
 
 def expect(T, T0, d, tpc):
     P = KTAB[d] * tpc
@@ -117,14 +143,14 @@ def main():
     with tempfile.TemporaryDirectory() as td:
         ref, out = os.path.join(td, "ref.bin"), os.path.join(td, "out.bin")
         build_beta2.build(sys.argv[1], ref, cord=False)
-        build_beta2.build(sys.argv[1], out, cord=True)
+        syms, _ = build_beta2.build(sys.argv[1], out, cord=True)
         base_img, cord_img = open(ref, "rb").read(), open(out, "rb").read()
     B, C = Emu(base_img), Emu(cord_img)
     rnd = random.Random(0xB2C0)
     fails, n = [], 0
 
     n += 1
-    if cord_img[0x18:0x30].rstrip() != b"EOS 4.71-beta2 +LfoCk":
+    if not cord_img[0x18:0x30].startswith(b"LfoCk "):
         fails.append(f"name {cord_img[0x18:0x30]!r}")
     for code, name, off in ((98, "Lfo1Ck", 0x1A4), (107, "Lfo2Ck", 0x1A6)):
         np, voff, fl = struct.unpack_from(">IHH", cord_img, DEST + 8 * code - BASE)
@@ -236,6 +262,100 @@ def main():
         n += 1
         if ph != e_cord:
             fails.append(f"override lfo{lfo}: phase {ph} != cord {e_cord} (rate would be {e_rate})")
+
+    for addr, _off in ((0x6B5B0, 0x96), (0x6B65A, 0x9E)):
+        get, setter = struct.unpack_from(">II", base_img, addr - BASE + 0x1A)
+        n += 1
+        if (get, setter) != (0, RATE_SET_STOCK):
+            fails.append(f"release Rate {addr:#x} getter/setter {get:#x}/{setter:#x}")
+        get, setter = struct.unpack_from(">II", cord_img, addr - BASE + 0x1A)
+        n += 1
+        if (get, setter) != (syms["rate_get"], syms["rate_set"]):
+            fails.append(f"cord Rate {addr:#x} getter/setter {get:#x}/{setter:#x}")
+
+    C.stub_voice()
+    for lfo, desc, off in UI_RATE:
+        for stored in (0, 7, 127, 143):
+            for word, expect_v in ((0, stored), (1, stored), (40, stored), (0xFFFF, 128)):
+                C.mu.mem_write(VOICE, bytes(0x200))
+                C.w(VOICE_IX, "H", 0)
+                C.w(VOICE + off, "B", stored)
+                C.w(GAP1 if lfo == 1 else GAP2, "H", word)
+                shown, kept = C.rate_call(syms["rate_get"], desc)
+                n += 1
+                if shown != expect_v or not kept:
+                    fails.append(f"rate_get lfo{lfo} stored {stored} word {word:#x}: {shown} kept {kept}")
+        for div in range(16):
+            C.mu.mem_write(VOICE, bytes(0x200))
+            C.w(VOICE_IX, "H", 0)
+            C.w(VOICE + off, "B", 40)
+            C.set_cord(lfo, div)
+            shown, kept = C.rate_call(syms["rate_get"], desc)
+            n += 1
+            if shown != 128 + div or not kept:
+                fails.append(f"rate_get lfo{lfo} div {div}: {shown} kept {kept}")
+            C.rate_call(syms["rate_set"], desc, 99)
+            n += 1
+            if C.r(VOICE + off, "B")[0] != 40:
+                fails.append(f"rate_set lfo{lfo} div {div} wrote {C.r(VOICE + off, 'B')[0]}")
+
+    # The panel shows the edited voice's Rate byte. While a note is sounding, that byte
+    # follows the cord and the original is kept aside.
+    C.w(0x100040AC, "I", VOICE)
+    for lfo, off, div, stored in ((1, 0x96, 3, 40), (2, 0x9E, 7, 55)):
+        C.setup(1, 1000, tick=1000)
+        C.w(0x100040AC, "I", VOICE)
+        C.lfo(lfo, stored, 0, 0, 0, 1)
+        C.w(VOICE + off, "B", stored)
+        C.set_cord(lfo, div)
+        C.tick(lfo, 1)
+        n += 1
+        if C.r(VOICE + off, "B")[0] != 128 + div:
+            fails.append(f"publish lfo{lfo}: rate {C.r(VOICE + off, 'B')[0]}")
+        held = C.mu.mem_read(0x100003EC + lfo - 1, 1)[0]
+        n += 1
+        if held != stored:
+            fails.append(f"publish lfo{lfo}: held {held}")
+        C.w(GAP1 if lfo == 1 else GAP2, "H", 0 if lfo == 1 else 1)
+        C.tick(lfo, 1)
+        n += 1
+        if C.r(VOICE + off, "B")[0] != stored:
+            fails.append(f"restore lfo{lfo}: rate {C.r(VOICE + off, 'B')[0]}")
+
+    # Opening an LFO page reads the Rate byte. A later change asks that page to draw again.
+    C.mu.mem_map(0x102C0000, 0x10000)
+    C.mu.mem_write(0xCC1CC, bytes.fromhex("52b910080f004e75"))
+    C.w(0x10080F00, "I", 0)
+    C.w(0x1000415C, "I", 0x12)
+    C.w(0x102C327C + 7 * 4, "I", 1)
+    C.setup(1, 1000, tick=1000)
+    C.w(0x100040AC, "I", VOICE)
+    C.lfo(1, 40, 0, 0, 0, 1)
+    C.w(VOICE + 0x96, "B", 40)
+    C.set_cord(1, 3)
+    C.tick(1, 1)
+    n += 1
+    draws = C.r(0x10080F00, "I")[0]
+    if draws != 1:
+        fails.append(f"refresh on change: {draws}")
+    C.tick(1, 1)
+    n += 1
+    draws = C.r(0x10080F00, "I")[0]
+    if draws != 1:
+        fails.append(f"refresh repeated: {draws}")
+    C.set_cord(1, 4)
+    C.tick(1, 1)
+    n += 1
+    draws = C.r(0x10080F00, "I")[0]
+    if draws != 2:
+        fails.append(f"refresh on a new division: {draws}")
+    C.w(0x1000415C, "I", 0)
+    C.set_cord(1, 5)
+    C.tick(1, 1)
+    n += 1
+    draws = C.r(0x10080F00, "I")[0]
+    if draws != 2:
+        fails.append(f"refresh off the LFO page: {draws}")
 
     print(f"{n} checks; {len(fails)} failures")
     for f in fails[:25]:

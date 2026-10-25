@@ -270,30 +270,16 @@ def main():
             fails.append(f"release Rate {addr:#x} getter/setter {get:#x}/{setter:#x}")
         get, setter = struct.unpack_from(">II", cord_img, addr - BASE + 0x1A)
         n += 1
-        if (get, setter) != (syms["rate_get"], syms["rate_set"]):
+        if (get, setter) != (0, syms["rate_set"]):
             fails.append(f"cord Rate {addr:#x} getter/setter {get:#x}/{setter:#x}")
 
     C.stub_voice()
     for lfo, desc, off in UI_RATE:
-        for stored in (0, 7, 127, 143):
-            for word, expect_v in ((0, stored), (1, stored), (40, stored), (0xFFFF, 128)):
-                C.mu.mem_write(VOICE, bytes(0x200))
-                C.w(VOICE_IX, "H", 0)
-                C.w(VOICE + off, "B", stored)
-                C.w(GAP1 if lfo == 1 else GAP2, "H", word)
-                shown, kept = C.rate_call(syms["rate_get"], desc)
-                n += 1
-                if shown != expect_v or not kept:
-                    fails.append(f"rate_get lfo{lfo} stored {stored} word {word:#x}: {shown} kept {kept}")
         for div in range(16):
             C.mu.mem_write(VOICE, bytes(0x200))
             C.w(VOICE_IX, "H", 0)
             C.w(VOICE + off, "B", 40)
             C.set_cord(lfo, div)
-            shown, kept = C.rate_call(syms["rate_get"], desc)
-            n += 1
-            if shown != 128 + div or not kept:
-                fails.append(f"rate_get lfo{lfo} div {div}: {shown} kept {kept}")
             C.rate_call(syms["rate_set"], desc, 99)
             n += 1
             if C.r(VOICE + off, "B")[0] != 40:
@@ -327,7 +313,8 @@ def main():
     C.mu.mem_write(0xCC1CC, bytes.fromhex("52b910080f004e75"))
     C.w(0x10080F00, "I", 0)
     C.w(0x1000415C, "I", 0x12)
-    C.w(0x102C327C + 7 * 4, "I", 1)
+    C.mu.mem_write(0x102C1000, bytes(0x40))
+    C.w(0x102C327C + 7 * 4, "I", 0x102C1000)
     C.setup(1, 1000, tick=1000)
     C.w(0x100040AC, "I", VOICE)
     C.lfo(1, 40, 0, 0, 0, 1)
@@ -356,6 +343,54 @@ def main():
     draws = C.r(0x10080F00, "I")[0]
     if draws != 2:
         fails.append(f"refresh off the LFO page: {draws}")
+
+    # The cached object is the field list. Rate is the container's first child. Its enable
+    # byte is the same switch the Tempo field uses: 0 greys it, 1 draws it normally.
+    SCREEN, BOX, WIDGET = 0x102C1000, 0x102C1180, 0x102C1200
+    C.w(SCREEN, "I", 0xB2D1C)
+    C.w(SCREEN + 0x30, "I", BOX)
+    C.w(SCREEN + 0x38, "I", 0x102C1400)
+    C.w(BOX, "I", 0x10D300)
+    C.w(BOX + 0x0C, "I", WIDGET)
+    C.mu.mem_write(WIDGET, bytes(0x40))
+    C.w(WIDGET + 0x3A, "B", 1)
+    C.w(WIDGET + 0x24, "B", 1)
+    C.w(0x1000415C, "I", 0x12)
+    C.tick(1, 1)
+    n += 1
+    if C.r(WIDGET + 0x3A, "B")[0] != 0 or C.r(WIDGET + 0x24, "B")[0] != 0:
+        fails.append(f"grey lfo1: enable {C.r(WIDGET + 0x3A, 'B')[0]} focus {C.r(WIDGET + 0x24, 'B')[0]}")
+    C.w(WIDGET + 0x3A, "B", 1)
+    C.w(WIDGET + 0x24, "B", 1)
+    C.tick(1, 1)
+    n += 1
+    if C.r(WIDGET + 0x3A, "B")[0] != 0 or C.r(WIDGET + 0x24, "B")[0] != 0:
+        fails.append(f"grey rebuilt: enable {C.r(WIDGET + 0x3A, 'B')[0]} focus {C.r(WIDGET + 0x24, 'B')[0]}")
+    draws = C.r(0x10080F00, "I")[0]
+    C.tick(1, 1)
+    n += 1
+    if C.r(WIDGET + 0x3A, "B")[0] != 0 or C.r(0x10080F00, "I")[0] != draws:
+        fails.append(f"grey held steady: enable {C.r(WIDGET + 0x3A, 'B')[0]}")
+    C.w(GAP1, "H", 0)
+    C.tick(1, 1)
+    n += 1
+    if C.r(WIDGET + 0x3A, "B")[0] != 1:
+        fails.append(f"grey released: {C.r(WIDGET + 0x3A, 'B')[0]}")
+    C.w(0x1000415C, "I", 0x13)
+    C.w(0x102C327C + 8 * 4, "I", 0x102C1000)
+    C.mu.mem_write(WIDGET, bytes(0x40))
+    C.w(WIDGET + 0x3A, "B", 1)
+    C.set_cord(1, 2)
+    C.tick(1, 1)
+    n += 1
+    if C.r(WIDGET + 0x3A, "B")[0] != 1:
+        fails.append(f"lfo1 tick greys the lfo2 page: {C.r(WIDGET + 0x3A, 'B')[0]}")
+    C.lfo(2, 40, 0, 0, 0, 1)
+    C.set_cord(2, 6)
+    C.tick(2, 1)
+    n += 1
+    if C.r(WIDGET + 0x3A, "B")[0] != 0:
+        fails.append(f"grey lfo2: {C.r(WIDGET + 0x3A, 'B')[0]}")
 
     print(f"{n} checks; {len(fails)} failures")
     for f in fails[:25]:

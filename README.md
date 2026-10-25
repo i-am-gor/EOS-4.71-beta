@@ -8,10 +8,13 @@ engineering the 4.70 firmware and testing every change in an emulator and on a r
 [PDF](docs/EOS-4.71-beta-Addendum.pdf)):
 
 **New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects the LFO's tempo
-division (4 bars … 1/32) and overrides Rate. Zero or positive leaves Rate alone. In the cord list,
-Lfo2Ck is grouped with the other LFO 2 destinations. The startup screen shows **EOS 4.71-beta2 +LfoCk**.
-This image is the released EOS 4.71-beta2 plus that cord. It does not include the withdrawn build 2
-filter changes.
+division (4 bars … 1/32) and overrides Rate. While it does, the Rate field shows that division, follows
+the controller, and is grey. The knob does not change the Rate underneath. Zero or positive leaves Rate
+alone, in its normal colour. In the cord list, Lfo2Ck is grouped with the other LFO 2 destinations.
+An image built from source shows **LfoCk** and the build time on the startup screen. The copy embedded
+in EOS Flasher is still the previous image and shows **EOS 4.71-beta2 +LfoCk** until
+`tools/make_patch.py` rebuilds `apps/eos-core/data/eos471beta2.e4p`. This line is the released
+EOS 4.71-beta2 plus that cord. It does not include the withdrawn build 2 filter changes.
 
 **New in 4.71-beta2:**
 
@@ -94,7 +97,9 @@ flatpak run io.github.rfidmusic.EOSFlasher
 2. Start **EOS Flasher**, choose your **EOS470.EXE**, select **EOS 4.71-beta2 +LfoCk**, press **Build**.
 3. Select the MIDI output and input, press **Send to E4**.
 4. Power on the E4 holding **Enter**, answer **Yes** to "Download OS from MIDI?".
-5. After about 9 minutes answer **Yes** to "Burn to flash?". The startup screen shows **EOS 4.71-beta2 +LfoCk**.
+5. After about 9 minutes answer **Yes** to "Burn to flash?". The startup screen shows the image that
+   was built. The embedded Flasher patch shows **EOS 4.71-beta2 +LfoCk**. A source build shows
+   **LfoCk** and the build time.
 
 To go back, do the same with **Original EOS 4.70**.
 

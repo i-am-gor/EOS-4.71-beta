@@ -60,6 +60,10 @@ Starting from the EOS 4.71-beta image (`build/eos471_beta.bin`, made from the st
 python3 tools/build_beta2.py build/eos471_beta.bin build/eos471_beta2.bin   # also writes .syms.json
 python3 tools/make_patch.py STOCK_4.70.bin build/eos471_beta2.bin apps/eos-core/data/eos471beta2.e4p
 ```
-`build_beta2.py` checks every stock byte it replaces before patching. Its emulator suites, each run against stock:
-`emu_lpfuzz_rel`, `emu_silence`, `emu_slice`, `emu_slew`, `emu_sloop`, `emu_portmap`, `emu_slicer` and `emu_pan`.
-Design notes: `notes/lpfuzz.md`, `silence_insert.md`, `slice_design.md`, `slicer_design.md` and `pan_bug.md`.
+`build_beta2.py` checks every stock byte it replaces before patching. With the cord patch the startup
+name is `LfoCk` plus the build time; `--nocord` keeps `EOS 4.71-beta2` (checksum `0886a24c`).
+`make_patch.py` records that exact image, so the Flasher patch changes whenever it is rebuilt.
+Emulator suites, each run against stock: `emu_lpfuzz_rel`, `emu_silence`, `emu_slice`, `emu_slew`,
+`emu_sloop`, `emu_portmap`, `emu_slicer`, `emu_pan`, `emu_lfock` and `emu_listorder`.
+Design notes: `notes/lpfuzz.md`, `silence_insert.md`, `slice_design.md`, `slicer_design.md`,
+`pan_bug.md` and `lfock.md`.

@@ -11,9 +11,10 @@
 | predecrement. divu.l into d0 encodes a remainder divide on 5206e; the quotient form uses d3.
 | move.w into a data register does not sign-extend.
 | Hooks (build_beta2.py): 0x61BF4 jmp cord_tick. Dest 98 / 107, flags 0x200.
-| The two front-panel Rate fields (0x6B5B0, 0x6B65A) get rate_get / rate_set. While the gap word
-| is negative the stored Rate byte becomes 128+division (the existing Rate names) and the setter
-| does not write. The LFO page paints that byte when it opens; rate_show asks it to paint again.
+| While the gap word is negative the stored Rate byte becomes 128+division (the existing Rate names)
+| and rate_set does not write. The LFO page paints that byte when it opens; rate_show asks it to
+| paint again. The same paint reads the Rate widget's enable byte. Clearing it is what greys Tempo
+| while the clock is external, so that byte is cleared while this LFO's gap word is negative.
 
         .equ    LFO_TICK,      0x00020400
         .equ    SYNC_BODY,     0x0002040E
@@ -26,7 +27,8 @@
         .equ    EDIT_VOICE,    0x100040AC   | preset screen's voice
         .equ    HOLD,          0x100003EC   | two saved Rate bytes, magic at +2. Nothing in the image reads this.
         .equ    PAGE_ID,       0x1000415C   | preset page being shown
-        .equ    PAGE_CACHE,    0x102C327C   | built pages, index = page id + 0xF5
+        .equ    PAGE_CACHE,    0x102C327C   | built pages; the opener's moveq #-11 makes the index page-11
+        .equ    SCREEN_VT,     0x000B2D1C   | cached LFO page object. Its page pointer is the long at +0x38.
 
         .section .lfk,"ax"
         .balign 4
@@ -95,17 +97,18 @@ rate_publish:
         move.l  EDIT_VOICE,%a0
         move.l  %a0,%d2
         beq.w   9f
+        lea     HOLD,%a1
         moveq   #0,%d2
-        move.b  HOLD+2,%d2
+        move.b  2(%a1),%d2
         cmpi.l  #0xC3,%d2
         beq.s   1f
         moveq   #-1,%d2
-        move.b  %d2,HOLD
-        move.b  %d2,HOLD+1
+        move.b  %d2,(%a1)
+        move.b  %d2,1(%a1)
         moveq   #0,%d2
         move.b  #0xC3,%d2
-        move.b  %d2,HOLD+2
-1:      lea     HOLD,%a1
+        move.b  %d2,2(%a1)
+1:
         cmpi.l  #LFO2_TICK_RET,%d1
         bne.s   2f
         addq.l  #1,%a1
@@ -151,22 +154,67 @@ rate_publish:
         beq.s   9f
         move.b  %d2,(%a0)
         bsr     rate_show
-9:      movem.l (%sp),%d0-%d3/%a0-%a1
+9:      move.l  (%sp),%d0
+        move.l  4(%sp),%d1              | rate_show reuses d1; the tick return is the saved one
+        bsr     rate_tone
+        movem.l (%sp),%d0-%d3/%a0-%a1
         lea     24(%sp),%sp
         rts
+
+| d0.w = this LFO's gap word, d1 = the tick return. Grey this page's Rate widget while the word
+| is negative. A rebuilt page comes back enabled, so the widget byte itself is the record.
+rate_tone:
+        move.l  PAGE_ID,%d2
+        moveq   #0x12,%d3
+        cmpi.l  #LFO2_TICK_RET,%d1
+        bne.s   1f
+        addq.l  #1,%d3
+1:      cmp.l   %d3,%d2
+        bne.s   9f
+        tst.w   %d0
+        bmi.s   2f
+        moveq   #1,%d0
+        bra.s   3f
+2:      moveq   #0,%d0
+3:      bsr     rate_grey
+        beq.s   9f
+        bsr     rate_show
+9:      rts
+
+| d0 = 1 to show Rate normally, 0 to grey it. Returns Z set when the widget is already that way.
+| The cached object is the field list. Its container's first child is Rate. The paint reads
+| byte +0x3A, and a focused field also has +0x24 set.
+rate_grey:
+        move.l  %d0,%d2
+        bsr     rate_slot
+        move.l  %a0,%d0
+        beq.s   9f
+        move.l  (%a0),%d0
+        cmpi.l  #SCREEN_VT,%d0
+        bne.s   7f
+        move.l  0x30(%a0),%d0
+        beq.s   9f
+        movea.l %d0,%a0
+        move.l  0x0C(%a0),%d0
+        beq.s   9f
+        movea.l %d0,%a0
+        moveq   #0,%d0
+        move.b  0x3A(%a0),%d0
+        cmp.l   %d2,%d0
+        beq.s   9f
+        move.b  %d2,0x3A(%a0)
+        bne.s   8f
+        clr.b   0x24(%a0)
+8:      moveq   #1,%d0
+        rts
+7:      moveq   #0,%d0
+9:      rts
 
 | The open LFO page (id 0x12 or 0x13) reads its fields again, the same way re-opening it does.
 | Preserves a5. No page object means there is nothing to draw.
 rate_show:
-        move.l  PAGE_ID,%d0
-        subi.l  #0x12,%d0
-        moveq   #1,%d1
-        cmp.l   %d1,%d0
-        bhi.s   9f
-        addq.l  #7,%d0                  | moveq #-11,d6 in the page opener: index is page-11
-        movea.l #PAGE_CACHE,%a0
-        move.l  (%a0,%d0.l*4),%a1
-        move.l  %a1,%d1
+        bsr     rate_slot
+        move.l  %a0,%d1
         beq.s   9f
         move.l  %a5,-(%sp)
         pea     3
@@ -176,53 +224,31 @@ rate_show:
         movea.l (%sp)+,%a5
 9:      rts
 
-| (descriptor) -> displayed rate. 128+division while that LFO's gap word is negative.
-| d1-d3/a2 are saved: the field reader only consumes d0, and the voice lookup may clobber the rest.
-        .globl  rate_get
-rate_get:
-        lea     -20(%sp),%sp
-        movem.l %d1-%d3/%a2,(%sp)
-        move.l  24(%sp),16(%sp)
-        bsr     voice_now
-        move.l  %a0,%d0
-        beq.s   8f
-        movea.l 16(%sp),%a2
-        moveq   #0,%d1
-        move.w  0x10(%a2),%d1
-        cmpi.l  #0x9E,%d1
-        beq.s   2f
-        move.w  0x1A4(%a0),%d0
-        bra.s   3f
-2:      move.w  0x1A6(%a0),%d0
-3:      tst.w   %d0
-        bmi.s   4f
-        move.l  %a0,%a1
-        adda.l  %d1,%a1
-        moveq   #0,%d0
-        move.b  (%a1),%d0
-        bra.s   8f
-4:      ext.l   %d0
-        cmpi.l  #0x9E,%d1
-        bne.s   5f
-        subq.l  #1,%d0
-5:      bsr     cord_div
-        addi.l  #128,%d0
-8:      movem.l (%sp),%d1-%d3/%a2
-        lea     20(%sp),%sp
+| Page object of the open LFO page in a0, and its cache index in d0. a0 is 0 otherwise.
+rate_slot:
+        move.l  PAGE_ID,%d0
+        subi.l  #0x12,%d0
+        moveq   #1,%d1
+        cmp.l   %d1,%d0
+        bhi.s   1f
+        addq.l  #7,%d0
+        movea.l #PAGE_CACHE,%a0
+        move.l  (%a0,%d0.l*4),%a0
+        rts
+1:      suba.l  %a0,%a0
         rts
 
 | (descriptor, value). While the gap word is negative the stored Rate is left alone.
+| The panel reads the Rate byte itself, so the descriptor getter stays the stock zero.
         .globl  rate_set
 rate_set:
-        lea     -20(%sp),%sp
-        movem.l %d1-%d3/%a2,(%sp)
-        move.l  24(%sp),16(%sp)
+        move.l  4(%sp),-(%sp)
         bsr     voice_now
         move.l  %a0,%d0
-        beq.s   7f
-        movea.l 16(%sp),%a2
+        beq.s   1f
+        movea.l (%sp),%a1
         moveq   #0,%d1
-        move.w  0x10(%a2),%d1
+        move.w  0x10(%a1),%d1
         cmpi.l  #0x9E,%d1
         beq.s   2f
         move.w  0x1A4(%a0),%d0
@@ -230,9 +256,7 @@ rate_set:
 2:      move.w  0x1A6(%a0),%d0
 3:      tst.w   %d0
         bmi.s   8f
-7:      movem.l (%sp),%d1-%d3/%a2
-        lea     20(%sp),%sp
+1:      addq.l  #4,%sp
         jmp     RATE_SET
-8:      movem.l (%sp),%d1-%d3/%a2
-        lea     20(%sp),%sp
+8:      addq.l  #4,%sp
         rts

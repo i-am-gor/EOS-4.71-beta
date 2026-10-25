@@ -60,11 +60,37 @@ descriptor getter while the controller moves, so a getter alone leaves the name 
 `rate_publish`, called from the tick, writes `128 + division` into that byte while the cord is
 negative and writes the previous byte back when the cord lets go. The two original bytes are kept at
 `0x100003EC` (nothing in the image reads that long). The page paints the byte when it opens. When the
-byte changes and the open page is an LFO page (`0x1000415C` is `0x12` or `0x13`), `rate_show` runs
-the same field refresh as opening that page again. The page's saved object is at cache index
-`page - 11` (the opener's `moveq #-11`). The getter and setter stay on the descriptors for
-the parameter reader: the setter still ignores the knob while the cord is negative.
+byte changes and the open page is an LFO page (`0x1000415C` is `0x12` or `0x13`), `rate_show` calls
+`0xCC1CC`, the same refresh as opening that page again. The saved object is at cache index
+`page - 11`: the opener's `moveq #-11` sign-extends, so page `0x12` is slot 7 and page `0x13` is
+slot 8. Treating that `moveq` as unsigned 245 looks up slot 263 and the value stays frozen until
+the page is opened again. Hardware on `LfoCk 20261025 21:22:39` (checksum `0886630e`) follows the
+controller while the page stays open.
+
+The descriptor getter stays the stock zero. The panel reads the Rate byte, and a nonzero getter is
+not what paints the field. `rate_set` returns without calling `0x69F80` while the gap word is
+negative, so the jog dial and the inc/dec buttons do nothing until the cord sends 0. That is the
+behaviour confirmed on the unit. The editor and SysEx Rate descriptors are left stock.
+
+Grey is the field widget's enable byte, `+0x3A`. Tempo uses the same byte: with Clock Source set
+to External, Seq Setup calls vtable `+0xE4` (`0x19F078`), which calls `0x1A1594` to store the
+enable byte and clear the focus byte `+0x24`. The paint (`0x1A032C`) then uses solid pattern
+`0x98D52` or checkerboard `0x98D62`. Pen 2, widget `+0x24` on its own, is the selection highlight,
+not the grey. The cached object is the field list (vtable `0xB2D1C`). Its container is the long at
+`+0x30` (vtable `0x10D300`), and Rate is that container's first child, the long at `+0x0C`. The
+page pointer is the long at `+0x38`. Reading `+0x3A` takes the middle of that pointer. Image
+`088653c8` (`LfoCk 20261025 22:54:50`) did that from the LFO tick: the UI froze and the note that
+was sounding stayed where it was. The tick now checks the list vtable, writes the enable byte only
+when it is wrong, clears `+0x24` when disabling, and then calls the same refresh. Opening the page
+while the cord is already held greys on the next tick. A steady cord does not redraw.
+
+Hardware on `LfoCk 20261025 23:18:03` (checksum `08865332`): the Rate value follows the cord, the
+field is grey while the sum is negative, and the jog dial and the inc/dec buttons edit Rate again
+after the cord sends 0. The port-map hole is 2236 bytes; this image uses 2232. `cord_tick` stays
+at `0x15F524`. The list walker `ord_d1` follows the larger patch at `0x15F770`.
 
 Saving the preset while a cord is held stores the division as Rate. Letting the cord go restores the
-previous Rate in the voice. The field keeps its normal colour. The editor and SysEx Rate descriptors
-are left stock.
+previous Rate in the voice. The EOS Flasher patch `apps/eos-core/data/eos471beta2.e4p` is still the
+previous image (startup name `EOS 4.71-beta2 +LfoCk`). `tools/make_patch.py` rebuilds it from a
+chosen `build/eos471_beta2.bin`. The About name includes the build time, so that patch changes
+every time it is made.

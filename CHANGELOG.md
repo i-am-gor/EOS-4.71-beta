@@ -12,7 +12,7 @@ withdrawn build 2 filter changes. `tools/build_beta2.py --nocord` rebuilds the r
 - While the sum is negative the LFO restarts on each note. Shape and Delay still work. The Rate cord,
   Variation and the LFO trigger are ignored, as they are for a synced Rate. That LFO's Rate field shows
   the cord's division and follows the controller. Turning the knob does not change the Rate underneath.
-  The field keeps its normal colour.
+  The value is grey while the cord holds it, and returns to its normal colour when the cord sends 0.
 - Lfo1Ck follows Lfo1Trg in the destination list. Lfo2Ck follows Lfo2Trg, and Lag0in follows
   Lfo2Ck. The stored numbers are unchanged: Lag0in is 106, Lfo2Ck is 107.
 - Checked in the emulator (`tools/emu_lfock.py`, `tools/emu_listorder.py`).

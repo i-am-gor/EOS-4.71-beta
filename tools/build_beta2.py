@@ -276,9 +276,9 @@ def build(base, out, probe=False, slew=True, cord=True):
             fmt, get, setter = struct.unpack_from('>III', img, a + 0x16 - BASE)
             if (fmt, get, setter) != (LFO_FMT, 0, RATE_SET_STOCK):
                 raise SystemExit(f'Rate descriptor {a:#x} not stock ({fmt:#x}, {get:#x}, {setter:#x})')
-            struct.pack_into('>II', img, a + 0x1A - BASE, syms['rate_get'], syms['rate_set'])
+            struct.pack_into('>I', img, a + 0x1E - BASE, syms['rate_set'])
         print(f'lfock: cord_tick at {syms["cord_tick"]:#x}; list order at {syms["ord_d1"]:#x}; '
-              f'rate_get at {syms["rate_get"]:#x}')
+              f'rate_set at {syms["rate_set"]:#x}')
     header = b'EOS 4.71-b2 SliceProbe' if probe else (cord_label() if cord else NAME)
     img[0x18:0x30] = header.ljust(24, b' ')
     struct.pack_into('>II', img, 4, 0, 0xffffffff)

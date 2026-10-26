@@ -19,6 +19,12 @@ While the sum is negative the LFO restarts on each note (the Sync switch is not 
 Delay still work. The Rate cord, Variation and the LFO trigger are ignored, as they are for a synced
 Rate. LFO 1 and LFO 2 are independent. Two cords into the same destination add.
 
+The cord stays in force through MIDI Stop and through a missing beat clock. What releases Rate is
+the cord: the sum going to zero or above, which on the panel is an amount of zero or above, or no
+cord still aimed at that LFO with a negative amount. MIDI Stop must not release it. An image that
+did (`LfoCk 20261026 11:37:35`, checksum `08864ac8`) stopped following the clock while a stopped
+sequencer kept sending it.
+
 Lfo1Ck is destination 98, listed after Lfo1Trg. Lfo2Ck is destination 107. In the list it is
 shown after Lfo2Trg and before Lag0in, so the LFO 2 destinations sit together. Lag0in stays
 destination 106. Presets store the id, not the list position.
@@ -42,16 +48,22 @@ destination 106. Presets store the id, not the list position.
 ## List order
 
 The cord screen skips entries whose voice offset is `0x1E` and shows the rest in id order.
-Id 106 was already `Lag0in`, so `Lfo2Ck` (107) would have been listed after it. The list
-walkers are retargeted (`patches/lfock/list_order.s`):
+Id 106 was already `Lag0in`, so `Lfo2Ck` (107) would have been listed after it. The stock
+walkers already treat the visit index as the id, so each one swaps 106 and 107 where it copies
+that index (`patches/lfock/list_order.s`). Visit position n maps to id n, except 106 → 107 and
+107 → 106.
 
-- `0x62D00` (display index in d1) and `0x62D60` (display index on the stack) return the id.
-  Visit position 106 yields id 107, and position 107 yields id 106.
-- `0x62C98` (stored id → display index) counts a limit of 106 as 107 and a limit of 107 as 106,
-  then joins the stock loop at `0x62CA4`.
+- `id_swap` is called over `move.l d7,d6; movea.l a1,a5` at `0x62D22` and `0x62D86`. The
+  following `moveq #0,d0; move.b d6,d0` stays. `move.l d7,d0` at `0x62D48` and `0x62DAC`
+  becomes `move.l d6,d0`.
+- `rev_id` replaces `move.b 0x17(sp),d1` at `0x62CA0`. The call pushes a return address, so the
+  id byte is read at `0x1B(sp)`. `tst.l` leaves Z set when the id is 0, and the stock `bne` at
+  `0x62CA4` still tests that.
 
-`0x62D00` and `0x62D60` agree on every index, and each id round-trips through `0x62C98`.
-Test: `tools/emu_listorder.py`.
+`id_swap` is 22 bytes at `0x66B24`. `rev_id` is 26 bytes at `0x683D2`. The `moveq #$40; rts`
+that occupied `0x66B38` is copied to `0x20AE6`, and the pointer at `0x68A68` follows it.
+`0x68A6C` still points at `0x66B3C`. `--nocord` leaves the stub and that pointer stock.
+Test: `tools/emu_listorder.py` (74 indexes).
 
 ## Rate field
 
@@ -69,8 +81,22 @@ controller while the page stays open.
 
 The descriptor getter stays the stock zero. The panel reads the Rate byte, and a nonzero getter is
 not what paints the field. `rate_set` returns without calling `0x69F80` while the gap word is
-negative, so the jog dial and the inc/dec buttons do nothing until the cord sends 0. That is the
-behaviour confirmed on the unit. The editor and SysEx Rate descriptors are left stock.
+negative, so the jog dial and the inc/dec buttons do nothing while the cord holds Rate. The editor
+and SysEx Rate descriptors are left stock.
+
+The gap word is written only while a note sounds. Editing the amount, or the destination, on the
+Cords page updates the preset table at voice `+0xBC` (24 × {src, dst, amt, pad}; amounts are the
+panel value, −100…+100, and live at `+0xBE`, `+0xC2`, …). The LFO page opener `0xCDA70` (pages
+`0x12` and `0x13`, the menu entries `0xCF148` and `0xCF154`) calls `rate_enter` where it stored the
+page id (`0xCDAC2`). If no cord still has a negative amount aimed at that LFO, the saved Rate is
+put back and the field is enabled before the page is drawn, cached page or new. A negative amount
+whose controller is idle stays grey until a note, because that sum is computed only while a note
+sounds. The source is read at its current level: a MIDI controller keeps its last value, so putting
+the amount negative again and playing a note returns to that division without a new message.
+
+`rate_enter` has to preserve d6 and d7. d6 arrived as `moveq #-11` and the opener still uses
+`d6 + page` as the cache index. Hooking the draw at `0xCD924` (`LfoCk 20261026 15:06:59`, checksum
+`08865a65`) changed nothing: that draw belongs to other pages, and LFO 1 and LFO 2 never call it.
 
 Grey is the field widget's enable byte, `+0x3A`. Tempo uses the same byte: with Clock Source set
 to External, Seq Setup calls vtable `+0xE4` (`0x19F078`), which calls `0x1A1594` to store the
@@ -81,13 +107,17 @@ not the grey. The cached object is the field list (vtable `0xB2D1C`). Its contai
 page pointer is the long at `+0x38`. Reading `+0x3A` takes the middle of that pointer. Image
 `088653c8` (`LfoCk 20261025 22:54:50`) did that from the LFO tick: the UI froze and the note that
 was sounding stayed where it was. The tick now checks the list vtable, writes the enable byte only
-when it is wrong, clears `+0x24` when disabling, and then calls the same refresh. Opening the page
-while the cord is already held greys on the next tick. A steady cord does not redraw.
+when it is wrong, clears `+0x24` when disabling, and then calls the same refresh. A cached page that
+is already grey stays grey. A page built for the first time while the cord is held comes up enabled
+and greys on the next tick. A steady cord does not redraw.
 
 Hardware on `LfoCk 20261025 23:18:03` (checksum `08865332`): the Rate value follows the cord, the
-field is grey while the sum is negative, and the jog dial and the inc/dec buttons edit Rate again
-after the cord sends 0. The port-map hole is 2236 bytes; this image uses 2232. `cord_tick` stays
-at `0x15F524`. The list walker `ord_d1` follows the larger patch at `0x15F770`.
+field is grey while the sum is negative, and the knob edits Rate again after the cord lets go.
+`LfoCk 20261026 15:58:54` (checksum `08865cc0`) is the current image. Returning to the LFO page
+after the amount is 0 or above, or the destination is no longer LfoCk, shows the saved Rate,
+editable, with no note. The port-map hole is 2236 bytes; this image uses 2180. `cord_tick` is
+`0x15F524`, `rate_set` is `0x15F72C`, `rate_enter` is `0x15F762`. `tools/emu_lfock.py` is 1776
+checks.
 
 Saving the preset while a cord is held stores the division as Rate. Letting the cord go restores the
 previous Rate in the voice. The EOS Flasher patch `apps/eos-core/data/eos471beta2.e4p` is still the

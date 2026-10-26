@@ -9,8 +9,10 @@ engineering the 4.70 firmware and testing every change in an emulator and on a r
 
 **New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects the LFO's tempo
 division (4 bars … 1/32) and overrides Rate. While it does, the Rate field shows that division, follows
-the controller, and is grey. The knob does not change the Rate underneath. Zero or positive leaves Rate
-alone, in its normal colour. In the cord list, Lfo2Ck is grouped with the other LFO 2 destinations.
+the controller, and is grey. The knob does not change the Rate underneath. An amount of zero or above,
+or another destination, gives that Rate back as soon as you return to the LFO page. The cord keeps
+following its source, including the last value a MIDI controller sent, and it keeps running when the
+sequencer stops. In the cord list, Lfo2Ck is grouped with the other LFO 2 destinations.
 An image built from source shows **LfoCk** and the build time on the startup screen. The copy embedded
 in EOS Flasher is still the previous image and shows **EOS 4.71-beta2 +LfoCk** until
 `tools/make_patch.py` rebuilds `apps/eos-core/data/eos471beta2.e4p`. This line is the released

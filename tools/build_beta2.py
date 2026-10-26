@@ -26,7 +26,11 @@ pan table 0x61590 entries 63/64 -322/-311 -> -316/-316: centre pan balanced (was
 LFO tick hook 0x61BF4 jmp cord_tick (patches/lfock/lfock.s, notes/lfock.md): destinations Lfo1Ck (98) and
 Lfo2Ck (107) override Rate with the 16 tempo divisions while their cord sum is negative. The cord
 destination list visits 107 before 106 so Lfo2Ck is grouped with LFO 2; Lag0in stays id 106
-(patches/lfock/list_order.s). --nocord builds the EOS 4.71-beta2 release without that patch.
+(patches/lfock/list_order.s swaps those two ids inside the stock walkers). The override
+follows the cord sum through MIDI Stop and a missing beat clock. Opening an LFO page
+puts the saved Rate back when that preset no longer has a negative-amount cord aimed at
+the page's LFO. --nocord builds the EOS
+4.71-beta2 release without that patch.
 """
 import datetime, json, os, struct, subprocess, sys, tempfile, zlib
 
@@ -77,12 +81,18 @@ PAN_TAB = 0x61590                         # pan gain table (128 words, read only
 PAN_FIX = ((-322, -311), (-316, -316))   # stock -> equal, so centre (index 64 reads 64 and 63) is balanced
 SCN_NAME = 0x2012E                        # destination 58's name (lfosync.s name_scn): 'SLpScn' -> 'WTScan'
 LFO_HOOK, LFO_HOOK_STOCK = 0x61BF4, bytes.fromhex('4ef900020400')   # jmp lfo_tick (0x20400)
+LFO_OPEN = 0xCDAC2   # move.l d7,page id; add.l d7,d6. Opener 0xCDA70, pages 0x12 and 0x13.
 LFOCK_NAME_AT = 0x201AE               # 18 bytes free before 0x201C0; Lfo1Ck / Lfo2Ck names
 LFOCK_DESTS = ((98, 0x1A4, b'Lfo1Ck'), (107, 0x1A6, b'Lfo2Ck'))
 UI_RATE = (0x6B5B0, 0x6B65A)   # front-panel LFO 1 / LFO 2 Rate descriptors
 RATE_SET_STOCK = 0x69F80
-LORD_HEAD = bytes.fromhex('4feffff0')   # lea -16(sp), sp at each list walker
-LORD_FUNCS = ((0x62D00, 'ord_d1'), (0x62D60, 'ord_stk'), (0x62C98, 'ord_rev'))
+# Stock list walkers swap visit 106/107 in place (patches/lfock/list_order.s). The forward
+# sites are move.l d7,d6; movea.l a1,a5, and the found id is move.l d7,d0. The reverse site
+# is move.b 0x17(sp),d1. 0x66B38 is moveq #$40,d0; rts, moved so id_swap can have its 4 bytes.
+RET40, RET40_PTR, RET40_AT = 0x66B38, 0x68A68, 0x20AE6
+ID_FWD = (0x62D22, 0x62D86)
+ID_RET = (0x62D48, 0x62DAC)
+ID_REV = 0x62CA0
 BM_KEYS, BM_SLOT = 0xB71E2, 0xB71F2      # Beat Munger soft keys {name, handler}; 0xB71F2 is the empty one
 NOP_SUBQ = bytes.fromhex('598f4e714e71')
 
@@ -181,8 +191,20 @@ def build(base, out, probe=False, slew=True, cord=True):
                  ('.blkV16', V16, [(so, '.silx3')])]
     pm_parts = [(pm, '.pm')] + ([] if probe else [(sr, '.slcx')])
     if cord:
-        pm_parts += [(lk, '.lfk'), (od, '.ord')]
+        pm_parts += [(lk, '.lfk')]
     place.append(('.blkPM', PM, pm_parts))
+    if cord:
+        place += [
+            ('.revid', (0x683D2, 0x683F0), [(od, '.revid')]),
+            ('.idsw', (0x66B24, 0x66B3C), [(od, '.idsw')]),
+        ]
+        stub = img[RET40 - BASE:RET40 - BASE + 4]
+        if stub != bytes.fromhex('70404e75') or u32(img, RET40_PTR) != RET40:
+            raise SystemExit('moveq #$40 stub is not where the list swap needs its bytes')
+        if img[RET40_AT - BASE:RET40_AT - BASE + 4] != bytes.fromhex('4e714e71'):
+            raise SystemExit('return-stub hole is not spare')
+        img[RET40_AT - BASE:RET40_AT - BASE + 4] = stub
+        struct.pack_into('>I', img, RET40_PTR - BASE, RET40_AT)
     ld = 'SECTIONS {\n' + ''.join(
         f'  {n} 0x{r[0]:X} : {{ ' + ' '.join(f'{o}({s})' for o, s in parts) +
         (' } =0x4E71\n' if n == '.blkPM' else ' }\n') for n, r, parts in place) + '}\n'
@@ -268,17 +290,33 @@ def build(base, out, probe=False, slew=True, cord=True):
         for code, voff, name in LFOCK_DESTS:
             ptr = LFOCK_NAME_AT + names.find(name + b'\0')
             struct.pack_into('>IHH', img, DEST_TABLE + 8 * code - BASE, ptr, voff, 0x200)
-        for addr, name in LORD_FUNCS:
-            if img[addr - BASE:addr - BASE + 4] != LORD_HEAD:
-                raise SystemExit(f'{addr:#x} is not the stock list walker')
-            img[addr - BASE:addr - BASE + 6] = b'\x4e\xf9' + struct.pack('>I', syms[name])
+        def bsr_w(at, target):
+            disp = target - (at + 2)
+            if not -32768 <= disp <= 32767:
+                raise SystemExit(f'bsr at {at:#x} cannot reach {target:#x}')
+            return b'\x61\x00' + struct.pack('>h', disp)
+        for addr in ID_FWD:
+            if img[addr - BASE:addr - BASE + 4] != bytes.fromhex('2c072a49'):
+                raise SystemExit(f'{addr:#x} is not the stock id copy')
+            img[addr - BASE:addr - BASE + 4] = bsr_w(addr, syms['id_swap'])
+        for addr in ID_RET:
+            if img[addr - BASE:addr - BASE + 2] != bytes.fromhex('2007'):
+                raise SystemExit(f'{addr:#x} is not move.l d7,d0')
+            img[addr - BASE:addr - BASE + 2] = bytes.fromhex('2006')
+        if img[ID_REV - BASE:ID_REV - BASE + 4] != bytes.fromhex('122f0017'):
+            raise SystemExit('reverse walker id load is not the stock move.b')
+        img[ID_REV - BASE:ID_REV - BASE + 4] = bsr_w(ID_REV, syms['rev_id'])
         for a in UI_RATE:
             fmt, get, setter = struct.unpack_from('>III', img, a + 0x16 - BASE)
             if (fmt, get, setter) != (LFO_FMT, 0, RATE_SET_STOCK):
                 raise SystemExit(f'Rate descriptor {a:#x} not stock ({fmt:#x}, {get:#x}, {setter:#x})')
             struct.pack_into('>I', img, a + 0x1E - BASE, syms['rate_set'])
-        print(f'lfock: cord_tick at {syms["cord_tick"]:#x}; list order at {syms["ord_d1"]:#x}; '
-              f'rate_set at {syms["rate_set"]:#x}')
+        opened = bytes.fromhex('23c71000415cdc87')
+        if img[LFO_OPEN - BASE:LFO_OPEN - BASE + 8] != opened:
+            raise SystemExit('LFO page opener is not the stock page-id store')
+        img[LFO_OPEN - BASE:LFO_OPEN - BASE + 8] = b'\x4e\xb9' + struct.pack('>I', syms['rate_enter']) + b'\x4e\x71'
+        print(f'lfock: cord_tick at {syms["cord_tick"]:#x}; id_swap at {syms["id_swap"]:#x}; '
+              f'rate_set at {syms["rate_set"]:#x}; rate_enter at {syms["rate_enter"]:#x}')
     header = b'EOS 4.71-b2 SliceProbe' if probe else (cord_label() if cord else NAME)
     img[0x18:0x30] = header.ljust(24, b' ')
     struct.pack_into('>II', img, 4, 0, 0xffffffff)

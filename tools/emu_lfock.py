@@ -24,7 +24,8 @@ import build_beta2  # noqa: E402
 from unicorn import Uc, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN
 from unicorn.m68k_const import (
     UC_M68K_REG_A2, UC_M68K_REG_A7, UC_M68K_REG_D0, UC_M68K_REG_D1,
-    UC_M68K_REG_D2, UC_M68K_REG_D3, UC_CPU_M68K_CFV4E)
+    UC_M68K_REG_D2, UC_M68K_REG_D3, UC_M68K_REG_D6, UC_M68K_REG_D7,
+    UC_CPU_M68K_CFV4E)
 
 BASE, RET = 0x20000, 0x1000
 RAM, STACK = 0x10000000, 0x10080000
@@ -391,6 +392,204 @@ def main():
     n += 1
     if C.r(WIDGET + 0x3A, "B")[0] != 0:
         fails.append(f"grey lfo2: {C.r(WIDGET + 0x3A, 'B')[0]}")
+
+    # Transport does not release the cord. A quiet external clock and a long internal gap
+    # leave the division sounding, the Rate byte at 128+div, and the knob blocked.
+    n += 1
+    if struct.unpack_from(">I", base_img, 0x68A68 - BASE)[0] != 0x66B38:
+        fails.append("nocord image moved the #$40 stub")
+    n += 1
+    hooked = b"\x4e\xb9" + struct.pack(">I", syms["rate_enter"]) + b"\x4e\x71"
+    if cord_img[0xCDAC2 - BASE:0xCDAC2 - BASE + 8] != hooked:
+        fails.append("LFO page opener was not retargeted")
+    n += 1
+    if base_img[0xCDAC2 - BASE:0xCDAC2 - BASE + 8] != bytes.fromhex("23c71000415cdc87"):
+        fails.append("nocord image retargeted the LFO page opener")
+    n += 1
+    if cord_img[0xCD924 - BASE:0xCD924 - BASE + 8] != bytes.fromhex("6100fcfa4fef000c"):
+        fails.append("cord image retargeted the other page shower")
+    for addr, stock in (
+        (0x135F2C, bytes.fromhex("4eb900020136")),
+        (0x135F34, bytes.fromhex("4eb900136b20")),
+        (0x135F3C, bytes.fromhex("4eb900136b28")),
+    ):
+        n += 1
+        if cord_img[addr - BASE:addr - BASE + 6] != stock:
+            fails.append(f"realtime {addr:#x} was retargeted")
+
+    LASTMS = 0x100003F4
+
+    def cord_phase(lfo, rate, mode, gap):
+        ms, t0, tpc = 5000, 1000, 20
+        E = Emu(cord_img)
+        E.setup(1, ms, tick=t0, mode=mode, tpc=tpc)
+        E.w(LASTMS, "I", ms - gap)
+        E.w(VOICE + 0x2E, "I", t0)
+        E.w(0x100040AC, "I", VOICE)
+        E.w(0x1000415C, "I", 0)
+        E.lfo(lfo, rate, 0, 0, 0, 0)
+        E.w(VOICE + (0x96 if lfo == 1 else 0x9E), "B", rate)
+        E.set_cord(lfo, 9)
+        E.w(TICK, "I", t0 + 400)
+        E.tick(lfo, 1)
+        p = LFO1 if lfo == 1 else LFO2
+        return E.r(p + 0x12, "H")[0], E.r(VOICE + (0x96 if lfo == 1 else 0x9E), "B")[0], E
+
+    def ref_phase(lfo, rate, mode, gap):
+        ms, t0, tpc = 5000, 1000, 20
+        E = Emu(base_img)
+        E.setup(1, ms, tick=t0, mode=mode, tpc=tpc)
+        E.w(LASTMS, "I", ms - gap)
+        E.w(VOICE + 0x2E, "I", t0)
+        E.lfo(lfo, rate, 0, 0, 0, 0)
+        E.w(TICK, "I", t0 + 400)
+        E.tick(lfo, 1)
+        return E.r((LFO1 if lfo == 1 else LFO2) + 0x12, "H")[0]
+
+    for lfo, rate, mode, gap, label in (
+        (1, 40, 1, 10, "external clock"),
+        (2, 17, 1, 1000, "quiet external clock"),
+        (1, 40, 0, 4000, "internal tempo"),
+    ):
+        ph, shown, E = cord_phase(lfo, rate, mode, gap)
+        want = ref_phase(lfo, 128 + 9, mode, gap)
+        n += 1
+        if ph != want or shown != 128 + 9 or not E.regs_ok():
+            fails.append(f"{label} lfo{lfo}: phase {ph} != {want}, rate {shown}")
+
+    C.setup(1, 5000, tick=1000, mode=1, tpc=20)
+    C.w(LASTMS, "I", 5000 - 1000)
+    C.w(0x100040AC, "I", VOICE)
+    C.w(0x1000415C, "I", 0x12)
+    C.w(0x102C327C + 7 * 4, "I", SCREEN)
+    C.w(VOICE + 0x2E, "I", 1000)
+    C.lfo(1, 40, 0, 0, 0, 0)
+    C.w(VOICE + 0x96, "B", 40)
+    C.set_cord(1, 3)
+    C.w(WIDGET + 0x3A, "B", 1)
+    C.tick(1, 1)
+    C.tick(1, 1)
+    n += 1
+    if C.r(VOICE + 0x96, "B")[0] != 128 + 3 or C.r(WIDGET + 0x3A, "B")[0] != 0 or not C.regs_ok():
+        fails.append(f"quiet keeps the cord: rate {C.r(VOICE + 0x96, 'B')[0]} "
+                     f"enable {C.r(WIDGET + 0x3A, 'B')[0]}")
+    C.w(0x1000337C + 8, "II", 0, 0)
+    C.rate_call(syms["rate_set"], 0x6B5B0, 77)
+    n += 1
+    if C.r(0x1000337C + 8, "II") != (0, 0) or C.r(VOICE + 0x96, "B")[0] != 128 + 3:
+        fails.append(f"rate_set while held queued {C.r(0x1000337C + 8, 'II')} "
+                     f"rate {C.r(VOICE + 0x96, 'B')[0]}")
+
+    # The Cords page writes the preset table. The gap word stays at the last note's sum
+    # until the next note, so opening the LFO page has to release from the table itself.
+    def plant(*cords):
+        raw = bytearray(96)
+        for i, (src, dst, amt) in enumerate(cords):
+            struct.pack_into(">BBb", raw, 4 * i, src, dst, amt)
+        C.mu.mem_write(VOICE + 0xBC, bytes(raw))
+
+    def engage(lfo, div):
+        off = 0x96 if lfo == 1 else 0x9E
+        C.w(0x100003EC + lfo - 1, "B", 0xFF)
+        C.w(0x1000415C, "I", 0x11 + lfo)
+        C.w(0x102C327C + (6 + lfo) * 4, "I", SCREEN)
+        C.lfo(lfo, 40, 0, 0, 0, 0)
+        C.w(VOICE + off, "B", 40)
+        C.set_cord(lfo, div)
+        C.w(WIDGET + 0x3A, "B", 1)
+        C.tick(lfo, 1)
+
+    def released(lfo, saved=40):
+        off = 0x96 if lfo == 1 else 0x9E
+        return C.r(VOICE + off, "B")[0] == saved and C.r(WIDGET + 0x3A, "B")[0] == 1
+
+    def held(lfo, div):
+        off = 0x96 if lfo == 1 else 0x9E
+        return C.r(VOICE + off, "B")[0] == 128 + div and C.r(WIDGET + 0x3A, "B")[0] == 0
+
+    C.w(0x1000415C, "I", 0)
+    C.call(syms["rate_open"])
+    n += 1
+    if not held(1, 3):
+        fails.append("opening another page released Rate")
+    C.w(0x1000415C, "I", 0x12)
+    plant()
+    C.call(syms["rate_open"])
+    n += 1
+    if not released(1):
+        fails.append(f"removed cord: rate {C.r(VOICE + 0x96, 'B')[0]} "
+                     f"enable {C.r(WIDGET + 0x3A, 'B')[0]}")
+    engage(1, 3)
+    plant((8, 98, -100))
+    C.w(GAP1, "H", 0)
+    C.call(syms["rate_open"])
+    n += 1
+    if not held(1, 3):
+        fails.append("negative amount with a cleared gap released Rate")
+    plant((8, 98, 0))
+    C.set_cord(1, 3)
+    C.call(syms["rate_open"])
+    n += 1
+    if not released(1):
+        fails.append(f"amount 0: rate {C.r(VOICE + 0x96, 'B')[0]} "
+                     f"enable {C.r(WIDGET + 0x3A, 'B')[0]}")
+    engage(1, 5)
+    plant((8, 98, 40))
+    C.call(syms["rate_open"])
+    n += 1
+    if not released(1):
+        fails.append("positive amount left Rate grey")
+    engage(1, 3)
+    plant((8, 0, -100))
+    C.call(syms["rate_open"])
+    n += 1
+    if not released(1):
+        fails.append("removed Lfo1Ck target left Rate grey")
+    engage(1, 3)
+    plant((8, 98, 0), (9, 98, -40))
+    C.call(syms["rate_open"])
+    n += 1
+    if not held(1, 3):
+        fails.append("a second negative cord released Rate")
+    plant((8, 98, 0), (9, 50, -40))
+    C.call(syms["rate_open"])
+    n += 1
+    if not released(1):
+        fails.append("retargeting the second cord left Rate grey")
+    engage(2, 6)
+    plant((8, 107, -80))
+    C.w(VOICE + 0x96, "B", 22)
+    C.call(syms["rate_open"])
+    n += 1
+    if not held(2, 6) or C.r(VOICE + 0x96, "B")[0] != 22:
+        fails.append(f"lfo2 still held: rate {C.r(VOICE + 0x9E, 'B')[0]} "
+                     f"lfo1 {C.r(VOICE + 0x96, 'B')[0]}")
+    plant((8, 107, 0))
+    C.call(syms["rate_open"])
+    n += 1
+    if not released(2) or C.r(VOICE + 0x96, "B")[0] != 22:
+        fails.append(f"lfo2 amount 0: rate {C.r(VOICE + 0x9E, 'B')[0]} "
+                     f"lfo1 {C.r(VOICE + 0x96, 'B')[0]}")
+    engage(1, 3)
+    plant()
+    C.mu.reg_write(UC_M68K_REG_D7, 0x12)
+    C.mu.reg_write(UC_M68K_REG_D6, 0xFFFFFFF5)
+    C.call(syms["rate_enter"])
+    n += 1
+    d6 = C.mu.reg_read(UC_M68K_REG_D6) & 0xFFFFFFFF
+    d7 = C.mu.reg_read(UC_M68K_REG_D7) & 0xFFFFFFFF
+    if not released(1) or d6 != 7 or d7 != 0x12 or C.r(0x1000415C, "I")[0] != 0x12:
+        fails.append(f"page entry left rate {C.r(VOICE + 0x96, 'B')[0]} "
+                     f"enable {C.r(WIDGET + 0x3A, 'B')[0]} d6 {d6:#x} d7 {d7:#x}")
+    engage(1, 4)
+    plant((8, 98, -20))
+    C.mu.reg_write(UC_M68K_REG_D7, 0x12)
+    C.mu.reg_write(UC_M68K_REG_D6, 0xFFFFFFF5)
+    C.call(syms["rate_enter"])
+    n += 1
+    d6 = C.mu.reg_read(UC_M68K_REG_D6) & 0xFFFFFFFF
+    if not held(1, 4) or d6 != 7:
+        fails.append(f"page entry with a negative amount released, d6 {d6:#x}")
 
     print(f"{n} checks; {len(fails)} failures")
     for f in fails[:25]:

@@ -12,7 +12,9 @@ preset, **WTScan** improvements (notes start at the loop, fast moves glide), and
 **New in +LfoCk:** **Lfo1Ck** and **Lfo2Ck** cord destinations. A negative amount selects that LFO's tempo
 division (4 bars through 1/32) and overrides Rate. While it does, the Rate field shows that division,
 follows the controller, and is grey, and the knob does not change the Rate underneath. An amount of
-zero or above leaves Rate in its normal colour and editable. In the cord list, Lfo2Ck follows Lfo2Trg.
+zero or above, or another destination, returns Rate to its previous value, in its normal colour, as
+soon as you open the LFO page again. The cord keeps running when the sequencer stops. In the cord
+list, Lfo2Ck follows Lfo2Trg.
 An image built from source shows **LfoCk** and the time it was built on the startup screen. This image
 is the released EOS 4.71-beta2 plus that cord.
 
@@ -217,10 +219,17 @@ divisions.
   LFO **Sync** switch is not used. **Shape** and **Delay** still work.
 - While the cord is negative, that LFO's **Rate** field shows the cord's division (the same names as a
   synced Rate, from 4bars to 1/32). Turning the knob does not change the stored Rate. The value is
-  grey while the cord holds it. At zero or above, Rate shows in its normal colour and edits as before.
+  grey while the cord holds it. Set the amount to **0** or above, or choose a different destination,
+  and Rate returns to the value it had before, in its normal colour, as soon as you open the LFO page
+  again. You do not have to play a note.
+- The cord uses the source's current level. A MIDI controller keeps the last value it was sent, so
+  setting the amount negative again and playing a note returns to that division without a new
+  message. Controller **0** at amount **−100** leaves Rate alone.
 - While the cord is negative, the Rate cord (Lfo1Rt / Lfo2Rt), **Variation** and the LFO trigger are
   ignored, as they are when Rate itself is synced.
-- The division follows the master clock, internal or external, the same way a synced Rate does.
+- The division follows the master clock, internal or external, the same way a synced Rate does,
+  including while the sequencer is stopped. A sequencer that still sends clock when stopped keeps
+  driving the cord.
 - In the destination list, **Lfo1Ck** follows Lfo1Trg. **Lfo2Ck** follows Lfo2Trg, and **Lag0in**
   follows Lfo2Ck. A preset stores the destination number, which is unchanged.
 
